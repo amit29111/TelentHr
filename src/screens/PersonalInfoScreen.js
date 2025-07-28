@@ -21,8 +21,8 @@ const PersonalInfoScreen = () => {
   const dispatch = useDispatch();
 
   const employee = useSelector((state) => state.employee.employeeData);
-  const loading = useSelector((state) => state.employee.loading);
-  const error = useSelector((state) => state.employee.error);
+  const loading = useSelector((state) => state.loading);
+  const error = useSelector((state) => state.error);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
@@ -259,6 +259,7 @@ const styles = StyleSheet.create({
     color: '#1C1C1E',
     flex: 1,
     flexWrap: 'wrap',
+    marginTop:36
   },
   fieldValue: {
     fontWeight: '600',
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     fontSize: 14,
     color: '#1C1C1E',
-    marginTop: 4,
+    marginTop: 16,
   },
   divider: {
     height: 1,

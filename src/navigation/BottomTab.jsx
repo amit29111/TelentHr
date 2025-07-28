@@ -172,8 +172,17 @@
 // export default BottomTab;
 
 
+
+
+
+
+
+
+
+
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { StyleSheet, Text, Image, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -182,10 +191,78 @@ import DashboardScreen from '../screens/DashboardScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import MyTeamScreen from '../screens/MyTeamScreen';
 import WorkSpace from '../screens/WorkSpace';
+import AttendanceScreen from '../screens/AttendanceScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import PersonalInfoScreen from '../screens/PersonalInfoScreen';
+import JobDetialScreen from '../screens/JobDetialScreen';
+import DocumentsScreen from '../screens/DocumentsScreen';
+import FolderDetailScreen from '../screens/FolderDetailScreen';
+import LeaveScreen from '../screens/LeaveScreen';
+import ApplyLeaveScreen from '../screens/ApplyLeaveScreen';
+import leaveRequestView from '../screens/leaveRequestView';
 import { useDispatch } from 'react-redux';
 import { logout } from '../redux/slice';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
+
+// Nested Stack Navigator for Dashboard and related screens
+const AppStack = () => {
+  return (
+    <Stack.Navigator initialRouteName="DashboardScreen">
+      <Stack.Screen
+        name="DashboardScreen"
+        component={DashboardScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ProfileScreen"
+        component={ProfileScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PersonalInfoScreen"
+        component={PersonalInfoScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="JobDetialScreen"
+        component={JobDetialScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="DocumentsScreen"
+        component={DocumentsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FolderDetailScreen"
+        component={FolderDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="LeaveScreen"
+        component={LeaveScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ApplyLeaveScreen"
+        component={ApplyLeaveScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="leaveRequestView"
+        component={leaveRequestView}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AttendanceScreen"
+        component={AttendanceScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+};
 
 const BottomTab = () => {
   const navigation = useNavigation();
@@ -204,7 +281,7 @@ const BottomTab = () => {
 
   return (
     <Tab.Navigator
-      initialRouteName="DashboardScreen" // Set DashboardScreen as default
+      initialRouteName="Dashboard"
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           if (route.name === 'Calendar') {
@@ -218,7 +295,7 @@ const BottomTab = () => {
                 }}
               />
             );
-          } else if (route.name === 'DashboardScreen') {
+          } else if (route.name === 'Dashboard') {
             return (
               <Image
                 source={require('../assets/bottamIcon/Frame.png')}
@@ -268,7 +345,7 @@ const BottomTab = () => {
                 style={{
                   width: 24,
                   height: 26,
-                  tintColor: focused ? '#8D777D' : '#666',
+                  tintColor: focused ? '#5C3C45' : '#666',
                 }}
               />
             );
@@ -276,7 +353,7 @@ const BottomTab = () => {
 
           // Fallback icons
           let iconName;
-          if (route.name === 'MyTeamScreen') {
+          if (route.name === 'My Team') {
             iconName = focused ? 'people' : 'people-outline';
           } else if (route.name === 'Logout') {
             iconName = focused ? 'log-out' : 'log-out-outline';
@@ -284,8 +361,7 @@ const BottomTab = () => {
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarLabel: ({ focused }) => {
-          // Return null for DashboardScreen to hide the label
-          if (route.name === 'DashboardScreen') {
+          if (route.name === 'Dashboard') {
             return null;
           }
           return (
@@ -306,7 +382,7 @@ const BottomTab = () => {
     >
       <Tab.Screen name="Calendar" component={CalendarScreen} />
       <Tab.Screen name="WorkSpace" component={WorkSpace} />
-      <Tab.Screen name="DashboardScreen" component={DashboardScreen} />
+      <Tab.Screen name="Dashboard" component={AppStack} />
       <Tab.Screen name="My Team" component={MyTeamScreen} />
       <Tab.Screen
         name="Logout"

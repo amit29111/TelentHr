@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiService from '../api/apiService';
 
+// Async Thunks
 export const fetchEmployeeById = createAsyncThunk(
   'employee/fetchById',
   async (empId, { rejectWithValue }) => {
@@ -13,6 +14,7 @@ export const fetchEmployeeById = createAsyncThunk(
     }
   }
 );
+
 export const fetchEmployeeNotification = createAsyncThunk(
   'employee/fetchNotification',
   async (empId, { rejectWithValue }) => {
@@ -25,6 +27,19 @@ export const fetchEmployeeNotification = createAsyncThunk(
   }
 );
 
+export const fetchByOrg = createAsyncThunk(
+  'organization/fetchByOrg',
+  async (orgId, { rejectWithValue }) => {
+    try {
+      const response = await apiService.organization(orgId);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed to fetch organization');
+    }
+  }
+);
+
+// Employee Slice
 const employeeSlice = createSlice({
   name: 'employee',
   initialState: {
@@ -35,7 +50,6 @@ const employeeSlice = createSlice({
   },
   reducers: {},
   extraReducers: (builder) => {
-    // For Employee By Id
     builder
       .addCase(fetchEmployeeById.pending, (state) => {
         state.loading = true;
@@ -48,10 +62,7 @@ const employeeSlice = createSlice({
       .addCase(fetchEmployeeById.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
-
-    // For Employee Notification
-    builder
+      })
       .addCase(fetchEmployeeNotification.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -66,4 +77,34 @@ const employeeSlice = createSlice({
       });
   },
 });
-export default employeeSlice.reducer;
+
+// Organization Slice
+const organizationSlice = createSlice({
+  name: 'organization',
+  initialState: {
+    employeeData: null,
+    loading: false,
+    error: null,
+  },
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchByOrg.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchByOrg.fulfilled, (state, action) => {
+        state.loading = false;
+        state.employeeData = action.payload;
+      })
+      .addCase(fetchByOrg.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+  },
+});
+
+// ✅ Named exports
+export const employeeReducer = employeeSlice.reducer;
+export const organizationReducer = organizationSlice.reducer;
+

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -16,9 +15,10 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
-import { userLogin } from '../redux/slice';
+import {useNavigation} from '@react-navigation/native';
+import {useDispatch, useSelector} from 'react-redux';
+import {userLogin} from '../redux/slice';
+import { Linking } from 'react-native';
 
 const COLORS = {
   primary: '#DAA3A3',
@@ -34,11 +34,11 @@ const LoginScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
-const employeeState = useSelector((state) => state.employee || {});
-const { attendance, isLoading, error } = employeeState;
+  const employeeState = useSelector(state => state.employee || {});
+  const {attendance, isLoading, error} = employeeState;
 
-  const [email, setEmail] = useState('pritam@gmail.com');
-  const [password, setPassword] = useState('Pritam123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [secureText, setSecureText] = useState(true);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -48,8 +48,8 @@ const { attendance, isLoading, error } = employeeState;
       return;
     }
     try {
-      await dispatch(userLogin({ email, password })).unwrap();
-      navigation.navigate('Dashboard');
+      await dispatch(userLogin({email, password})).unwrap();
+      navigation.navigate('MainApp');
     } catch (err) {
       Alert.alert('Login Failed', err || 'An error occurred during login');
     }
@@ -58,20 +58,17 @@ const { attendance, isLoading, error } = employeeState;
   return (
     <LinearGradient
       colors={['#402530', '#DAA3A3']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.container}
-    >
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 1}}
+      style={styles.container}>
       <View style={styles.circle} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+        style={{flex: 1}}>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
+          contentContainerStyle={{flexGrow: 1}}
+          keyboardShouldPersistTaps="handled">
           <View style={styles.logoContainer}>
             <Image
               source={require('../assets/finalezlogonewHrms.png')}
@@ -82,7 +79,9 @@ const { attendance, isLoading, error } = employeeState;
 
           <View style={styles.formContainer}>
             <Text style={styles.welcomeText}>Welcome Back!</Text>
-            <Text style={styles.subText}>Log in to enjoy your treats and rewards</Text>
+            <Text style={styles.subText}>
+              Log in to enjoy your treats and rewards
+            </Text>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -92,6 +91,7 @@ const { attendance, isLoading, error } = employeeState;
               value={email}
               onChangeText={setEmail}
               placeholder="Enter your email"
+              placeholderTextColor="gray"
               keyboardType="email-address"
               autoCapitalize="none"
               autoFocus
@@ -102,15 +102,18 @@ const { attendance, isLoading, error } = employeeState;
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordContainer}>
               <TextInput
-                style={[styles.input, { flex: 1 }]}
+                style={[styles.input, {flex: 1}]}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={secureText}
+                placeholderTextColor="gray"
                 placeholder="Enter your password"
                 textContentType="password"
                 autoComplete="password"
               />
-              <Pressable onPress={() => setSecureText(!secureText)} style={styles.eyeIcon}>
+              <Pressable
+                onPress={() => setSecureText(!secureText)}
+                style={styles.eyeIcon}>
                 <Icon
                   name={secureText ? 'visibility-off' : 'visibility'}
                   size={20}
@@ -122,9 +125,13 @@ const { attendance, isLoading, error } = employeeState;
             <View style={styles.optionsRow}>
               <Pressable
                 style={styles.checkboxContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]} />
+                onPress={() => setRememberMe(!rememberMe)}>
+                <View
+                  style={[
+                    styles.checkbox,
+                    rememberMe && styles.checkboxChecked,
+                  ]}
+                />
                 <Text style={styles.optionText}>Remember Me</Text>
               </Pressable>
               <Pressable onPress={() => navigation.navigate('ForgotPassword')}>
@@ -136,8 +143,7 @@ const { attendance, isLoading, error } = employeeState;
               style={[styles.submitButton, isLoading && styles.disabledButton]}
               onPress={handleLogin}
               activeOpacity={0.8}
-              disabled={isLoading}
-            >
+              disabled={isLoading}>
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -154,16 +160,15 @@ const { attendance, isLoading, error } = employeeState;
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => navigation.navigate('GuestLogin')}
-                activeOpacity={0.8}
-              >
+                onPress={() => Linking.openURL('https://ezcompliance.in/')}
+                activeOpacity={0.8}>
                 <Text style={styles.secondaryButtonText}>Guest Login</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.secondaryButton}
-                onPress={() => navigation.navigate('ScheduleDemo')}
-                activeOpacity={0.8}
-              >
+                onPress={() => Linking.openURL('https://ezcompliance.in/')}
+                activeOpacity={0.8}>
                 <Text style={styles.secondaryButtonText}>Schedule a Demo</Text>
               </TouchableOpacity>
             </View>
@@ -182,7 +187,7 @@ const { attendance, isLoading, error } = employeeState;
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {flex: 1},
   circle: {
     position: 'absolute',
     top: -50,
@@ -199,7 +204,7 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 50,
   },
-  logo: { width: 90, height: 95 },
+  logo: {width: 90, height: 95},
   logoText: {
     fontSize: 44,
     fontFamily: 'CormorantGaramond-Bold',
@@ -255,6 +260,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 12,
     marginTop: 12,
+    color: 'black', // Added to set the text color to red
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -263,6 +269,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 15,
+    paddingTop: 13,
   },
   optionsRow: {
     flexDirection: 'row',
@@ -299,7 +306,7 @@ const styles = StyleSheet.create({
     marginTop: 27,
     elevation: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 8,
     width: '100%',

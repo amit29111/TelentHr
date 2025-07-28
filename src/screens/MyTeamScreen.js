@@ -11,6 +11,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,8 @@ const leaveData = [
 ];
 
 const MyTeamScreen = () => {
+  const navigation = useNavigation();
+
   const renderLeaveItem = ({ item }) => (
     <View style={styles.leaveItem}>
       <Image source={require('../../src/assets/amit.jpeg')} style={styles.leaveAvatar} />
@@ -58,16 +61,22 @@ const MyTeamScreen = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.header}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} >My Team </Text>
+          <Text style={styles.headerTitle}>My Team</Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle} >Who is on leave <Text style={styles.redText}>(10)</Text></Text>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.sectionTitle}>
+              Who is on leave <Text style={styles.redText}>(10)</Text>
+            </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Dashboard', { screen: 'leaveRequestView' })}
+            >
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
           </View>
           <FlatList
             data={leaveData}
@@ -80,8 +89,14 @@ const MyTeamScreen = () => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Leave Request <Text style={styles.redText}>(09)</Text></Text>
-            <Text style={styles.viewAll}>View All</Text>
+            <Text style={styles.sectionTitle}>
+              Leave Request <Text style={styles.redText}>(09)</Text>
+            </Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Dashboard', { screen: 'leaveRequestView' })}
+            >
+              <Text style={styles.viewAll}>View All</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.requestCard}>
@@ -155,6 +170,7 @@ const MyTeamScreen = () => {
   );
 };
 
+// Styles remain unchanged
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FDF7F2' },
   header: {
@@ -166,16 +182,16 @@ const styles = StyleSheet.create({
     height: 64,
     left: -5,
   },
-  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 500, marginLeft: 16, fontFamily:'poppins' },
+  headerTitle: { color: '#fff', fontSize: 20, fontWeight: 500, marginLeft: 16, fontFamily: 'poppins' },
   section: { padding: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, },
-  sectionTitle: { fontSize: 13,  fontFamily: 'poppins' ,fontFamily:'poppins',marginBottom: 10,},
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  sectionTitle: { fontSize: 13, fontFamily: 'poppins', marginBottom: 10 },
   redText: { color: 'red', fontSize: 13 },
   viewAll: { color: 'red', fontSize: 10 },
   leaveItem: { alignItems: 'center', marginRight: 15 },
   leaveAvatar: { width: 60, height: 60, borderRadius: 30, marginBottom: 4 },
   avatar: {
-    width: 20,               // Reduced image size
+    width: 20,
     height: 20,
     borderRadius: 10,
     marginRight: 6,
@@ -186,7 +202,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   name: {
-    fontSize: 10,            // Reduced font size for name
+    fontSize: 10,
     fontWeight: 'bold',
     marginRight: 6,
     color: '#000000',
@@ -210,24 +226,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 4,
-    alignItems: 'center',          // Make both sides vertically aligned
-    justifyContent: 'center',       // Distribute evenly in horizontal
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   leftSection: {
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
   },
-  
   separator: {
     width: 1,
     backgroundColor: '#CCC',
-    height: '100%',                  // Limit height of the separator
-    marginHorizontal: 24,           // Small space between left and right
+    height: '100%',
+    marginHorizontal: 24,
   },
-  
   rightSection: {
-    flex: 2,                        // Slightly more space for the list
+    flex: 2,
   },
   circleWrapper: {
     justifyContent: 'center',
@@ -260,7 +274,6 @@ const styles = StyleSheet.create({
     color: '#6D6E75',
     marginTop: 4,
   },
-
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',

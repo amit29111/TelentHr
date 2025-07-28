@@ -35,9 +35,10 @@ const gridItems = [
 const ProfileScreen = ({ navigation }) => {
   const [allRecord, setAllRecord] = useState(null);
   const dispatch = useDispatch();
-  const employee = useSelector((state) => state.employee.employeeData);
-  const loading = useSelector((state) => state.employee.loading);
-  const error = useSelector((state) => state.employee.error);
+  const employee = useSelector((state) => state.employee);
+  const loading = useSelector((state) => state.loading);
+  const error = useSelector((state) => state.error);
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -58,7 +59,7 @@ const ProfileScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (employee) {
-      setAllRecord(employee);
+      setAllRecord(employee.employeeData);
     }
   }, [employee]);
 
@@ -155,9 +156,9 @@ const ProfileScreen = ({ navigation }) => {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.name}>
-              {allRecord?.firstName && allRecord?.lastName
+              {allRecord?.firstName || allRecord?.lastName
                 ? `${allRecord.firstName} ${allRecord.lastName}`
-                : 'Unknown User'}
+                : 'Unknown User 123'}
             </Text>
             <Text style={styles.designation}>{allRecord?.jobTitle || 'No Title'}</Text>
             <Text style={styles.empId}>{allRecord?.customId || 'No ID'}</Text>

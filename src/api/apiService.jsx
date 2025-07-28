@@ -406,7 +406,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiAuth from './authConfig';
 import { ENDPOINT } from './endpoint';
-import apiClient from './config';
+import apiClient from './apiClient';
 
 const handleError = (error) => {
   if (error.response) {
@@ -439,7 +439,6 @@ const apiService = {
   async getEmployeeById(empId) {
     try {
       const response = await apiClient.get(ENDPOINT.AUTH.EMPBYID(empId));
-      console.log('🌐 Get Employee API Response:', response.data); // Debug
       return response.data;
     } catch (error) {
       console.error('❌ Get Employee API Error:', error.response?.data || error);
@@ -505,6 +504,17 @@ const apiService = {
       return response.data;
     } catch (error) {
       console.error('❌ Attendance API Error:', error.response?.data || error);
+      throw handleError(error);
+    }
+  },
+  async getOrganition(orgId) {
+    try {
+      const response = await apiClient.get(
+        `${ENDPOINT.AUTH.ORGDETAIL(orgId)}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('❌ Attendance API Error:2222222222', error.response?.data || error);
       throw handleError(error);
     }
   },
