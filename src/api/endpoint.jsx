@@ -11,13 +11,31 @@ export const ENDPOINT = {
     BREAKIN: 'attendance/breakIn',
     BREAKOUT: 'attendance/breakOut',
     CHECKCHECKIN: empId => `attendance/todayAttendanceByEmployeeId/${empId}`,
+    CHART: empId => `attendance/getAttendanceRateChart?employeeId=${empId}`,
+    ATTENDANCERECORD: (empId, startDate, endDate) => `attendance/getAttendanceByDateRange/${empId}?startDate=${startDate}&endDate=${endDate}`,
+
   },
-  //     BREAK :{
-  //     CHECKIN:'attendance/checkIn',
-  //     CHECKOUT:'attendance/checkOut',
-  //     BREAKIN:'attendance/breakIn',
-  //     BREAKOUT:'attendance/breakOut',
-  //     CHECKCHECKIN:(empId)=>`attendance/todayAttendanceByEmployeeId/${empId}`,
-  //     BREAKIN:(empId)=>`attendance/breakIn/${empId}`,
-  // }
+  LEAVE: {
+    LEAVESHOW : (empId, page, limit) => `leave/getAllLeaveRequestsForEmployee/${empId}?page=${page}&limit=${limit}`,
+    LEAVEBALANCE : (empId) => `leave/leaveTypeByEmployeeId/${empId}`,
+    LEAVE : `leave/createLeaveRequest`,
+    GETLEAVETYPE: empId => `leave/leaveTypeByEmployeeId/${empId}`,
+    UPDATEEMPLOYEE: empId => `employee/updateEmployee/${empId}`,
+
+
+  
+
+
+  },
+  CALENDAR:{
+    SHOWHOLIDAY:(startDate,endDate, page, limit) => `holiday/getAllHolidays?startDate=${startDate}&endDate=${endDate}&page=${page}&limit=${limit}`,
+   
+    SHOWEVENT:( page, limit) => `event/getAllEvents?page=${page}&limit=${limit}`,
+   SHOWMETTING:(empId,startDate,endDate) => `employee/getEmployeeInterviewsByDate/${empId}?startDate=${startDate}&endDate=${endDate}`,
+  },
+  UPLOADPHOTO:{
+    UPLOADPHOTO:(empId) => `employee/employeeImg/${empId}`
+  }
+
+  
 };

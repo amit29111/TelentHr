@@ -1,12 +1,65 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import { useNavigation } from '@react-navigation/native';
 
 const WorkSpace = () => {
-  return (
-    <View>
-      <Text>WorkSpace</Text>
-    </View>
-  )
-}
+  const navigation = useNavigation();
 
-export default WorkSpace
+  const handleBackPress = () => {
+    try {
+      // Navigate to the Dashboard tab and specify DashboardScreen
+      navigation.navigate('Dashboard', { screen: 'DashboardScreen' });
+    } catch (error) {
+      console.error('Navigation error:', error);
+      navigation.goBack(); // Fallback to previous screen
+    }
+  };
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <AntDesign name="arrowleft" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.title}>WorkSpace Screen</Text>
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.comingSoon}>Coming Soon</Text>
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FDF7F2',
+  },
+  header: {
+    backgroundColor: '#402530',
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 5,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginLeft: 10,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  comingSoon: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#5C3C45',
+  },
+});
+
+export default WorkSpace;

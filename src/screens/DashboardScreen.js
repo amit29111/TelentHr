@@ -7,49 +7,55 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Dimensions,
+  Pressable,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import BottomTab from '../navigation/BottomTab';
+import TextTicker from 'react-native-text-ticker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useDispatch, useSelector} from 'react-redux';
 import {
   fetchEmployeeById,
   fetchEmployeeNotification,
 } from '../redux/employeeSlice';
-import { fetchByOrg} from '../redux/slice'
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {fetchByOrg} from '../redux/slice';
+import {Modal} from 'react-native-paper';
+
+const {width, height} = Dimensions.get('window');
 
 const DashboardScreen = ({navigation}) => {
   const [allRecord, setAllRecord] = useState(null);
   const [getNotifications, setGetNotifications] = useState([]);
   const dispatch = useDispatch();
 
-
   const employee = useSelector(state => state?.employee?.employeeData);
-  const notifications = useSelector(state => state.notifications);
+  const notifications = useSelector(state => state?.employee?.notificationData);
   const loading = useSelector(state => state.isLoading);
-  const error = useSelector(state => state.error);
+  const orgDetails = useSelector(state => state.auth.employeeData);
 
-  const orgDetails = useSelector(state => state.auth.employeeData)
- 
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const handleOutsidePress = () => {
+    setShowNotifications(false);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-       
-        const orgId = await AsyncStorage.getItem('orgId')
+        const orgId = await AsyncStorage.getItem('orgId');
         const empId = await AsyncStorage.getItem('empId');
-        
+
         if (empId) {
           dispatch(fetchEmployeeById(empId));
-           dispatch(fetchByOrg(orgId))
+          dispatch(fetchByOrg(orgId));
           dispatch(fetchEmployeeNotification(empId));
         }
-      } catch (e) { 
+      } catch (e) {
         console.log('❌ Error fetching empId:', e);
       }
     };
     fetchData();
   }, [dispatch]);
-
   useEffect(() => {
     if (employee) setAllRecord(employee);
     if (notifications) setGetNotifications(notifications.data || []);
@@ -152,29 +158,28 @@ const DashboardScreen = ({navigation}) => {
     navigation.navigate('ProfileScreen');
   };
 
-  // if (loading || !allRecord) {
-  //   return (
-  //     <View style={styles.centerContainer}>
-  //       <ActivityIndicator size="large" color="red" />
-  //       <Text>Loading...sss</Text>
-  //     </View>
-  //   );
-  // }
-
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.profilePicContainer}>
-            <Image
-              source={
-                allRecord?.photoUrl
-                  ? {uri: allRecord.photoUrl}
-                  : require('../../src/assets/dashboardIcon/birthday.png')
-              }
-              style={styles.profilePic}
-            />
+            {allRecord?.photoUrl ? (
+              <Image
+                source={{uri: allRecord.photoUrl}}
+                style={styles.profilePic}
+              />
+            ) : (
+              <View style={styles.initialsContainer}>
+                <Text style={styles.initialsText}>
+                  {allRecord?.firstName
+                    ? allRecord.firstName.substring(0, 2).toUpperCase()
+                    : ''}
+                   ̰
+                </Text>
+              </View>
+            )}
+
             <TouchableOpacity
               style={styles.plusIconContainer}
               onPress={handleImageUpload}>
@@ -185,57 +190,91 @@ const DashboardScreen = ({navigation}) => {
               />
             </TouchableOpacity>
           </View>
-          <View>
-            <Text style={styles.greeting}>
-              Hello, {allRecord?.firstName} {allRecord?.lastName}
-            </Text>
-            <Text style={styles.date}>{currentDate}</Text>
+
+          <View style={{flex: 1}}>
+            <Text style={styles.greeting}>Hello,</Text>
+            <TextTicker
+              style={styles.greeting}
+              duration={5000}
+              loop
+              bounce={false}
+              numberOfLines={1}
+              repeatSpacer={60}
+              marqueeDelay={500}>
+              {allRecord?.firstName} {allRecord?.lastName}
+            </TextTicker>
           </View>
         </View>
+
         <View style={styles.headerRight}>
-          <TouchableOpacity>
+          {/* <TouchableOpacity>
             <Ionicons name="notifications" size={24} color="white" />
             <View style={styles.notificationBadge}>
               <Text style={styles.badgeText}>{getNotifications.length}</Text>
             </View>
+          </TouchableOpacity> */}
+          <TouchableOpacity onPress={() => setShowNotifications(true)}>
+            <Ionicons name="notifications" size={24} color="white" />
+            {getNotifications.length > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>{getNotifications.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
+
           <Image
-            // source={require('../../src/assets/dashboardIcon/avatar.png')}
-            source={
-                  orgDetails?.logo
-                    ? {uri: orgDetails?.logo}
-                    : ''
-                }
+            source={orgDetails?.logo ? {uri: orgDetails?.logo} : ''}
             style={styles.companyLogo}
           />
+          <Modal
+            transparent
+            visible={showNotifications}
+            animationType="fade"
+            onRequestClose={handleOutsidePress}>
+            <Pressable
+              style={styles.modalBackground}
+              onPress={handleOutsidePress}>
+              <Pressable style={styles.notificationPanel}>
+                <View style={styles.panelHeader}>
+                  <Text style={styles.panelTitle}>Notifications</Text>
+                  <TouchableOpacity onPress={handleOutsidePress}>
+                    <Ionicons name="close" size={20} color="black" />
+                  </TouchableOpacity>
+                </View>
+                {getNotifications.length > 0 ? (
+                  getNotifications.map((note, index) => (
+                    <View key={index}>
+                      <Text style={styles.notificationText}>
+                        {note.message || 'New notification'} :-{' '}
+                        <Text style={{color: 'red'}}>{note.title}</Text>
+                      </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.notificationText}>No notifications</Text>
+                )}
+              </Pressable>
+            </Pressable>
+          </Modal>
         </View>
-
-        <TouchableOpacity style={styles.searchIconContainer}>
-          <Ionicons name="search" size={24} color="white" />
-        </TouchableOpacity>
       </View>
 
-      {/* Birthdays Section */}
+      {/* Birthday Section */}
       <View style={styles.birthdaySection}>
         <View style={styles.birthdayCard}>
           <View style={styles.birthdayHeader}>
-            <View style={styles.birthdayTitle}>
-              <Image
-                source={require('../../src/assets/dashboardIcon/Birthdaystext.png')}
-                style={styles.BirthdaystextPic}
-              />
-            </View>
-
-            <View style={styles.centerContainer}>
-              <Image
-                source={
-                  allRecord?.photoUrl
-                    ? {uri: allRecord.photoUrl}
-                    : require('../../src/assets/dashboardIcon/birthday.png')
-                }
-                style={styles.birthdayPic}
-              />
-            </View>
+            <Image
+              source={require('../../src/assets/dashboardIcon/Birthdaystext.png')}
+              style={styles.BirthdaystextPic}
+            />
+            <Image
+              source={
+                allRecord?.photoUrl
+                  ? {uri: allRecord.photoUrl}
+                  : require('../../src/assets/dashboardIcon/birthday.png')
+              }
+              style={styles.birthdayPic}
+            />
           </View>
 
           <View style={styles.birthdayInfo}>
@@ -254,16 +293,19 @@ const DashboardScreen = ({navigation}) => {
         </View>
       </View>
 
-      {/* Main Content */}
-      <ScrollView style={styles.content}>
+      {/* Content */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{paddingBottom: 100}}>
         {/* Overview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            <TouchableOpacity>
+            {/* <TouchableOpacity>
               <Text style={styles.viewMore}>View More</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
+
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -274,13 +316,22 @@ const DashboardScreen = ({navigation}) => {
                   style={[
                     styles.overviewCard,
                     {backgroundColor: card.backgroundColor || '#EBEBEB'},
-                  ]}>
+                  ]}
+                  onPress={() => {
+                    if (card.title === 'Payroll')
+                      navigation.navigate('MyPayRollScreen');
+                    else if (card.title === 'Apply Leave')
+                      navigation.navigate('LeaveScreen');
+                    else if (card.title === 'Attendance')
+                      navigation.navigate('AttendanceScreen');
+                    else if (card.title === 'Calendar')
+                      navigation.navigate('CalendarScreen');
+                    else if (card.title === 'Announcements')
+                      navigation.navigate('AnnouncementScreen');
+                  }}>
                   <Image source={card.image} style={styles.overviewImage} />
                 </TouchableOpacity>
-                <Text
-                  style={styles.ManageWorkcardText}
-                  numberOfLines={1}
-                  ellipsizeMode="tail">
+                <Text style={styles.ManageWorkcardText} numberOfLines={1}>
                   {card.title}
                 </Text>
               </View>
@@ -288,7 +339,7 @@ const DashboardScreen = ({navigation}) => {
           </ScrollView>
         </View>
 
-        {/* Feature Cards */}
+        {/* Features */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Manage Work & Benefits in One Place
@@ -296,43 +347,29 @@ const DashboardScreen = ({navigation}) => {
           {chunkedFeatureCards.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.featureRow}>
               {row.map((card, index) => (
-                // <TouchableOpacity
-                //   key={index}
-                //   style={[
-                //     styles.featureCard,
-                //     {backgroundColor: card.backgroundColor},
-                //   ]}
-                //   onPress={() => {
-                //     if (card.title === 'Leave') {
-                //       navigation.navigate('LeaveScreen');
-                //     }
-                //   }}>
-                //   <Image source={card.image} style={styles.featureImage} />
-                //   <Text
-                //     style={styles.cardText}
-                //     numberOfLines={2}
-                //     ellipsizeMode="tail">
-                //     {card.title}
-                //   </Text>
-                // </TouchableOpacity>
-                 <TouchableOpacity
+                <TouchableOpacity
                   key={index}
                   style={[
                     styles.featureCard,
-                    { backgroundColor: card.backgroundColor },
+                    {backgroundColor: card.backgroundColor},
                   ]}
                   onPress={() => {
-                    if (card.title === 'Leave') {
-                      navigation.navigate('LeaveScreen');
-                    } else if (card.title === 'Attendance') {
-                      navigation.navigate('AttendanceScreen'); // ✅ Navigate here
-                    }
+                    const screenMap = {
+                      Leave: 'LeaveScreen',
+                      'Raise Concern': 'RaiseConcernScreen',
+                      'My Payroll': 'MyPayRollScreen',
+                      Attendance: 'AttendanceScreen',
+                      Announcements: 'AnnouncementScreen',
+                      Reports: 'ReportScreen',
+                      'Learning & Development': 'LearningDevelopmentScreen',
+                      'Task & Management': 'TaskManagementScreen',
+                      Performance: 'PerfomanceScreen',
+                    };
+                    const screen = screenMap[card.title];
+                    if (screen) navigation.navigate(screen);
                   }}>
                   <Image source={card.image} style={styles.featureImage} />
-                  <Text
-                    style={styles.cardText}
-                    numberOfLines={2}
-                    ellipsizeMode="tail">
+                  <Text style={styles.cardText} numberOfLines={2}>
                     {card.title}
                   </Text>
                 </TouchableOpacity>
@@ -366,50 +403,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#5C3C45',
+    padding: 16,
+    backgroundColor: '#452300',
     minHeight: 140,
-    marginTop: -20,
+    zIndex: 1,
+    elevation: 1,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
     gap: 12,
   },
+
   profilePicContainer: {
-    position: 'relative',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    // overflow: 'hidden',
+    position: 'relative', // <-- important
   },
-  profilePic: {
-    width: 55,
-    height: 55,
-    borderRadius: 30,
-    marginRight: 10,
-  },
+
   plusIconContainer: {
     position: 'absolute',
-    bottom: -3,
-    right: 5,
-    backgroundColor: 'white',
-    borderRadius: 10,
+    bottom: 40,
+    right: 42,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    zIndex: 999, // high value
+    elevation: 10, // for Android
   },
+
+  // profilePicContainer: {position: 'relative'},
+  profilePic: {
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
+  },
+
   icon: {
-    width: 18,
-    height: 18,
+    width: 12,
+    height: 12,
+    // zIndex:10,
+    // elevation: 10,
   },
   greeting: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '600',
+    color: '#fff',
+    maxWidth: '100%',
   },
-  date: {
-    fontSize: 14,
-    color: '#E0E0E0',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 15,
-  },
+  headerRight: {flexDirection: 'row', alignItems: 'center', zIndex: 1, gap: 15},
   notificationBadge: {
     position: 'absolute',
     top: -6,
@@ -421,31 +468,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  badgeText: {
-    color: 'white',
-    fontSize: 12,
-  },
+  badgeText: {color: 'white', fontSize: 12},
   companyLogo: {
-    width: 55,
-    height: 55,
-    borderRadius: 30,
+    width: width * 0.14,
+    height: width * 0.14,
+    borderRadius: width * 0.07,
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  searchIconContainer: {
-    position: 'absolute',
-    bottom: 4,
-    left: 16,
-    padding: 8,
-  },
-  content: {
-    flex: 1,
-  },
-  birthdaySection: {
-    backgroundColor: '#5C3C45',
-  },
+  birthdaySection: {backgroundColor: '#452300'},
   birthdayCard: {
-    flexDirection: 'column',
     backgroundColor: '#F2E7E6',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -457,81 +489,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  birthdayTitle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-bold',
-    color: '#000000',
-    marginTop: 8,
-  },
-  centerContainer: {
-    alignItems: 'center',
-  },
-  BirthdaystextPic: {
-    marginTop: -50,
-  },
+  BirthdaystextPic: {width: 80, height: 20, resizeMode: 'contain'},
   birthdayPic: {
-    width: 70,
-    height: 70,
-    borderRadius: 40,
-    marginBottom: 12,
-    marginLeft: 52,
-    marginTop: -10,
+    width: width * 0.18,
+    height: width * 0.18,
+    borderRadius: width * 0.09,
+    marginLeft: 75,
   },
   birthdayInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
     paddingHorizontal: 10,
   },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  birthdayTime: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 12,
-  },
-  sendWishes: {
-    fontSize: 14,
-    color: '#23B480',
-    fontWeight: 'bold',
-    marginTop: -50,
-  },
+  timeContainer: {flexDirection: 'row', alignItems: 'center'},
+  birthdayTime: {fontSize: 14, color: '#666', marginLeft: 12},
+  sendWishes: {fontSize: 14, color: '#23B480', fontWeight: 'bold'},
+  section: {paddingHorizontal: 16},
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 10,
   },
-  viewMore: {
-    color: '#CE1C1C',
-    fontSize: 10,
-    fontFamily: 'Poppins',
-  },
-  overviewScroll: {
-    flexDirection: 'row',
-    paddingLeft: 5,
-  },
-  section: {
-    paddingHorizontal: 16, // Added padding for left and right
-  },
+  sectionTitle: {fontSize: 14, fontWeight: 'bold', color: '#000',marginTop:20,},
+  viewMore: {color: '#CE1C1C', fontSize: 10},
+  overviewScroll: {flexDirection: 'row'},
   overviewCard: {
     borderRadius: 10,
-    padding: 15,
+    padding: 12,
     marginRight: 12,
     alignItems: 'center',
-    width: 64,
-    height: 64,
+    width: width * 0.16,
+    height: width * 0.16,
   },
   overviewImage: {
-    width: 23,
-    height: 23,
+    width: width * 0.06,
+    height: width * 0.06,
     resizeMode: 'contain',
   },
   ManageWorkcardText: {
@@ -540,38 +533,33 @@ const styles = StyleSheet.create({
     color: '#959595',
     marginTop: 5,
     maxWidth: 80,
-    fontFamily: 'inter',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginVertical: 12,
+  },
+  featureCard: {
+    width: width * 0.29,
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureImage: {
+    width: width * 0.1,
+    height: width * 0.1,
+    resizeMode: 'contain',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    // marginBottom: 10,
   },
   cardText: {
     fontSize: 12,
     textAlign: 'center',
     color: '#1B1D4D',
-    marginTop: 5,
     maxWidth: 80,
-    fontFamily: 'inter',
-  },
-
-  featureRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    marginHorizontal: 5,
-    marginTop: 8,
-  },
-  featureCard: {
-    width: '32%',
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-  },
-  featureImage: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 10,
   },
   footer: {
     backgroundColor: '#FFF',
@@ -579,22 +567,18 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     elevation: 4,
     margin: 16,
   },
   heading: {
     fontSize: 18,
-    fontFamily: 'Poppins-Bold',
+    fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtext: {
     fontSize: 14,
-    fontFamily: 'Poppins',
     color: '#333',
     textAlign: 'center',
     marginBottom: 10,
@@ -607,7 +591,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
+  notificationPanel: {
+    position: 'absolute',
+    top: 40, // icon ke neeche ka space
+    right: 10, // screen ke right se distance
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 10,
+    width: 250,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 10000,
+    elevation: 9999,
+  },
+
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  panelTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  notificationText: {
+    fontSize: 14,
+    paddingVertical: 4,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#ddd',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 10,
+    paddingRight: 10,
+    zIndex: 999,
+    height: 200,
+  },
+  
+  initialsContainer: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50', // choose any color
+  },
+  initialsText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
 });
 
 export default DashboardScreen;
-

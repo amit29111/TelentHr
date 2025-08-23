@@ -429,10 +429,10 @@ const apiService = {
         systemUserEmail: email,
         systemUserPassword: password,
       });
-      console.log('🌐 Login API Response:', response.data);
+      // console.log('🌐 Login API Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Login API Error:', error.response?.data || error);
+      // console.error('❌ Login API Error:', error.response?.data || error);
       throw handleError(error);
     }
   },
@@ -441,14 +441,14 @@ const apiService = {
       const response = await apiClient.get(ENDPOINT.AUTH.EMPBYID(empId));
       return response.data;
     } catch (error) {
-      console.error('❌ Get Employee API Error:', error.response?.data || error);
+      // console.error('❌ Get Employee API Error:', error.response?.data || error);
       throw handleError(error);
     }
   },
   async getEmployeeNotification(empId) {
     try {
       const response = await apiClient.get(ENDPOINT.AUTH.NOTIFICATION(empId));
-      console.log('🌐 Notification API Response:', response.data); // Debug
+      // console.log('🌐 ', response.data); // Debug
       return response.data;
     } catch (error) {
       console.error('❌ Notification API Error:', error.response?.data || error);
@@ -458,17 +458,17 @@ const apiService = {
   async checkIn() {
     try {
       const response = await apiClient.post(ENDPOINT.BREAK.CHECKIN);
-      console.log('🌐 Check-In API Response:', response.data);
+      // console.log('🌐 Check-In API Response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Check-In API Error:', error.response?.data || error);
+      // console.error('❌ Check-In API Error:', error.response?.data || error);
       throw handleError(error);
     }
   },
   async checkOut() {
     try {
       const response = await apiClient.post(ENDPOINT.BREAK.CHECKOUT);
-      console.log('🌐 Check-Out API Response:', response.data);
+      // console.log('🌐 Check-Out API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Check-Out API Error:', error.response?.data || error);
@@ -478,7 +478,7 @@ const apiService = {
   async breakIn() {
     try {
       const response = await apiClient.post(ENDPOINT.BREAK.BREAKIN);
-      console.log('🌐 Break-In API Response:', response.data);
+      // console.log('🌐 Break-In API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Break-In API Error:', error.response?.data || error);
@@ -488,7 +488,7 @@ const apiService = {
   async breakOut() {
     try {
       const response = await apiClient.post(ENDPOINT.BREAK.BREAKOUT);
-      console.log('🌐 Break-Out API Response:', response.data);
+      // console.log('🌐 Break-Out API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Break-Out API Error:', error.response?.data || error);
@@ -500,7 +500,7 @@ const apiService = {
       const response = await apiClient.get(
         `${ENDPOINT.AUTH.EMPBYID(empId)}/attendance?date=${date}`
       );
-      console.log('🌐 Attendance API Response:', response.data);
+      // console.log('🌐 Attendance API Response:', response.data);
       return response.data;
     } catch (error) {
       console.error('❌ Attendance API Error:', error.response?.data || error);
@@ -514,7 +514,7 @@ const apiService = {
       );
       return response.data;
     } catch (error) {
-      console.error('❌ Attendance API Error:2222222222', error.response?.data || error);
+      // console.error('❌ Attendance API Error:2222222222', error.response?.data || error);
       throw handleError(error);
     }
   },

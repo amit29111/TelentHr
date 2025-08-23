@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,32 @@ import {
   Image,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import { useNavigation } from '@react-navigation/native';
 
-const DocumentsScreen = ({navigation}) => {
+const DocumentsScreen = () => {
+  
+  const navigation = useNavigation();
+
+  const handleBackPress = () => {
+    navigation.navigate('ProfileScreen');
+  };
+
   const [folders, setFolders] = useState([
     {
       id: '1',
       title: 'Personal documents',
       files: [
-        {id: 'f1', name: 'Aadhar Card.pdf'},
-        {id: 'f2', name: 'PAN Card.pdf'},
+        { id: 'f1', name: 'Aadhar Card.pdf' },
+        { id: 'f2', name: 'PAN Card.pdf' },
       ],
     },
     {
       id: '2',
       title: 'Legal documents',
       files: [
-        {id: 'f1', name: 'Aadhar Card.pdf'},
-        {id: 'f2', name: 'PAN Card.pdf'},
+        { id: 'f1', name: 'Aadhar Card.pdf' },
+        { id: 'f2', name: 'PAN Card.pdf' },
       ],
     },
   ]);
@@ -39,12 +48,12 @@ const DocumentsScreen = ({navigation}) => {
   const handleAddFolder = () => {
     if (!newFolderName.trim()) return;
     if (editingFolder) {
-      setFolders(prev =>
-        prev.map(folder =>
+      setFolders((prev) =>
+        prev.map((folder) =>
           folder.id === editingFolder.id
-            ? {...folder, title: newFolderName}
-            : folder,
-        ),
+            ? { ...folder, title: newFolderName }
+            : folder
+        )
       );
     } else {
       const newFolder = {
@@ -59,39 +68,35 @@ const DocumentsScreen = ({navigation}) => {
     setModalVisible(false);
   };
 
-  const handleDelete = id => {
-    Alert.alert(
-      'Delete Folder',
-      'Are you sure you want to delete this folder?',
-      [
-        {text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setFolders(prev => prev.filter(f => f.id !== id));
-          },
+  const handleDelete = (id) => {
+    Alert.alert('Delete Folder', 'Are you sure you want to delete this folder?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          setFolders((prev) => prev.filter((f) => f.id !== id));
         },
-      ],
-    );
+      },
+    ]);
   };
 
-  const handleRename = folder => {
+  const handleRename = (folder) => {
     setEditingFolder(folder);
     setNewFolderName(folder.title);
     setModalVisible(true);
   };
 
-  const renderFolder = ({item}) => (
+  const renderFolder = ({ item }) => (
     <TouchableOpacity
-     
-      onPress={() => navigation.navigate('FolderDetailScreen', {folder: item})}>
+      onPress={() => navigation.navigate('FolderDetailScreen', { folder: item })}
+    >
       <View style={styles.card}>
         <Image
           source={require('../../src/assets/folder.png')}
           style={styles.folderImage}
         />
-        <View style={{flex: 1}}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.subtitle}>
             {item.files?.length || 0} Files | 0 Folders
@@ -100,15 +105,16 @@ const DocumentsScreen = ({navigation}) => {
         <TouchableOpacity
           onPress={() => {
             Alert.alert('Options', item.title, [
-              {text: 'Rename', onPress: () => handleRename(item)},
+              { text: 'Rename', onPress: () => handleRename(item) },
               {
                 text: 'Delete',
                 onPress: () => handleDelete(item.id),
                 style: 'destructive',
               },
-              {text: 'Cancel', style: 'cancel'},
+              { text: 'Cancel', style: 'cancel' },
             ]);
-          }}>
+          }}
+        >
           <Ionicons name="ellipsis-vertical" size={20} color="#999" />
         </TouchableOpacity>
       </View>
@@ -119,13 +125,17 @@ const DocumentsScreen = ({navigation}) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <AntDesign name="arrowleft" size={24} color="#5C3C45" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Documents</Text>
       </View>
+
 
       {/* Folder List */}
       <FlatList
         data={folders}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         renderItem={renderFolder}
         contentContainerStyle={styles.listContainer}
       />
@@ -133,7 +143,8 @@ const DocumentsScreen = ({navigation}) => {
       {/* Add New Folder */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setModalVisible(true)}>
+        onPress={() => setModalVisible(true)}
+      >
         <Text style={styles.fabText}>+ New</Text>
       </TouchableOpacity>
 
@@ -145,7 +156,8 @@ const DocumentsScreen = ({navigation}) => {
         onRequestClose={() => {
           setModalVisible(false);
           setEditingFolder(null);
-        }}>
+        }}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>
@@ -159,18 +171,17 @@ const DocumentsScreen = ({navigation}) => {
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalBtn, {backgroundColor: '#ccc'}]}
+                style={[styles.modalBtn, { backgroundColor: '#ccc' }]}
                 onPress={() => {
                   setModalVisible(false);
                   setEditingFolder(null);
                   setNewFolderName('');
-                }}>
+                }}
+              >
                 <Text>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalBtn}
-                onPress={handleAddFolder}>
-                <Text style={{color: '#fff'}}>
+              <TouchableOpacity style={styles.modalBtn} onPress={handleAddFolder}>
+                <Text style={{ color: '#fff' }}>
                   {editingFolder ? 'Update' : 'Create'}
                 </Text>
               </TouchableOpacity>
@@ -189,30 +200,39 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FDF2E0',
   },
-  header: {
-    backgroundColor: '#FFDCC8',
-    paddingTop: 50,
-    paddingBottom: 12,
+   header: {
+    backgroundColor: '#FFDAC6',
+    padding: 15,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center', // center main axis par
+  },
+  backButton: {
+    position: 'absolute', 
+    left: 15,              // left corner mai fix ho jayega
+    padding: 5,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#5A2A55',
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 28,
+    fontFamily: 'Lato-Bold', // Lato Bold font use karega
+    fontWeight: 'bold',      // extra boldness ensure karega
+    color: '#5C3C45',
   },
   listContainer: {
     padding: 16,
   },
   card: {
-    width:346,
-    height:86,
-    marginTop:20,
+    width: 380,
+    height: 86,
+    marginTop: 20,
     backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
     padding: 14,
     marginBottom: 12,
-    
+    borderRadius:10,
   },
   folderImage: {
     width: 61,
@@ -232,26 +252,24 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    bottom: 25,
+    bottom: 30,
     alignSelf: 'center',
-    backgroundColor: '#5A2A55',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 50,
+    backgroundColor: '#402530',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 10,
     elevation: 5,
-    backgroundColor:'#402530',
-    borderRadius:15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   fabText: {
-    width:96,
-    height:51,
     color: '#FFFFFF',
-    fontFamily:'Acme-Regular',
-    fontWeight:'bold',
-    fontSize: 20,
-    textAlign:'center',
-    justifyContent:'center'
-    
+    fontFamily: 'Acme-Regular',
+    fontWeight: 'bold',
+    fontSize: 18,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

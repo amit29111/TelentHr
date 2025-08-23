@@ -91,27 +91,7 @@ const ApplyLeaveScreen = () => {
       />
 
       {/* Table */}
-      <Text style={styles.tableTitle}>Leave Balance</Text>
-      <View style={styles.tableHeader}>
-        <Text style={styles.tableHeaderText}>LEAVE NAME</Text>
-        <Text style={styles.tableHeaderText}>CREDIT DAYS</Text>
-        <Text style={styles.tableHeaderText}>USED DAYS</Text>
-        <Text style={styles.tableHeaderText}>BALANCE</Text>
-      </View>
-
-      {[
-        ['Casual Leave', 14, 14, 14],
-        ['Sick Leave', 25, 25, 25],
-        ['Earned Leave', 19, 19, 19],
-        ['Privilege Leave', 22, 22, 22],
-      ].map(([name, credit, used, balance], index) => (
-        <View key={index} style={styles.tableRow}>
-          <Text style={styles.tableText}>{name}</Text>
-          <Text style={styles.tableText}>{credit}</Text>
-          <Text style={styles.tableText}>{used}</Text>
-          <Text style={styles.tableText}>{balance}</Text>
-        </View>
-      ))}
+      
 
       {/* Buttons */}
       <View style={styles.buttonRow}>
