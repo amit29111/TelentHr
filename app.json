@@ -1,4 +1,7 @@
-{
-  "name": "TalentHr",
-  "displayName": "TalentHr"
-}
+  {
+    "name": "ezhrmslite",
+    "displayName": "Ez Hrms Lite",
+    "android" : {
+      "package" : "com.ezcompliance.ezhrmslite"
+    }
+  }

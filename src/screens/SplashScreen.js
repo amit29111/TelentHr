@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +18,7 @@ const SplashScreen = () => {
         if (isTokenValid) {
           navigation.replace('MainApp'); // ✅ Navigate to Dashboard if token is valid
         } else {
-          navigation.replace('WelcomeScreen'); // ❌ Expired or missing → Welcome
+          navigation.replace('WelcomeScreen'); // ❌ Expired or missing → Welcome #DAA3A2
         }
       } catch (e) {
         navigation.replace('WelcomeScreen');
@@ -31,7 +30,7 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ActivityIndicator size="large" color="#DAA3A3" />
+      <ActivityIndicator size="large" color="green" />
     </View>
   );
 };

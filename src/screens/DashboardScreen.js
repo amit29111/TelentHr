@@ -6,11 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Dimensions,
   Pressable,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 import TextTicker from 'react-native-text-ticker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useDispatch, useSelector} from 'react-redux';
@@ -21,7 +20,7 @@ import {
 import {fetchByOrg} from '../redux/slice';
 import {Modal} from 'react-native-paper';
 
-const {width, height} = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 const DashboardScreen = ({navigation}) => {
   const [allRecord, setAllRecord] = useState(null);
@@ -30,7 +29,6 @@ const DashboardScreen = ({navigation}) => {
 
   const employee = useSelector(state => state?.employee?.employeeData);
   const notifications = useSelector(state => state?.employee?.notificationData);
-  const loading = useSelector(state => state.isLoading);
   const orgDetails = useSelector(state => state.auth.employeeData);
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -56,17 +54,11 @@ const DashboardScreen = ({navigation}) => {
     };
     fetchData();
   }, [dispatch]);
+
   useEffect(() => {
     if (employee) setAllRecord(employee);
     if (notifications) setGetNotifications(notifications.data || []);
   }, [employee, notifications]);
-
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
 
   const currentTime = new Date().toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -74,12 +66,14 @@ const DashboardScreen = ({navigation}) => {
     hour12: true,
   });
 
+  // ✅ Only Attendance & Leave
   const featureCards = [
-    {
-      title: 'My Payroll',
-      image: require('../../src/assets/mypayroll.png'),
-      backgroundColor: '#FDE3BF',
-    },
+
+     {
+       title: 'My Payroll',
+       image: require('../../src/assets/mypayroll.png'),
+       backgroundColor: '#FDE3BF',
+     },
     {
       title: 'Attendance',
       image: require('../../src/assets/attendence.png'),
@@ -90,44 +84,29 @@ const DashboardScreen = ({navigation}) => {
       image: require('../../src/assets/leave.png'),
       backgroundColor: '#FF415554',
     },
-    {
-      title: 'Announcements',
-      image: require('../../src/assets/announcement.png'),
-      backgroundColor: '#84272754',
-    },
-    {
-      title: 'Raise Concern',
-      image: require('../../src/assets/raiseconcern.png'),
-      backgroundColor: '#EA5E9C54',
-    },
-    {
-      title: 'Reports',
-      image: require('../../src/assets/reports.png'),
-      backgroundColor: '#9CD06954',
-    },
-    {
-      title: 'Learning & Development',
-      image: require('../../src/assets/learning&dev.png'),
-      backgroundColor: '#F6665954',
-    },
-    {
-      title: 'Task & Management',
-      image: require('../../src/assets/taskmanagement.png'),
-      backgroundColor: '#AB3D0454',
-    },
-    {
-      title: 'Performance',
-      image: require('../../src/assets/perfomance.png'),
-      backgroundColor: '#26A69A54',
-    },
+     {
+       title: 'Announcements',
+       image: require('../../src/assets/announcement.png'),
+       backgroundColor: '#84272754',
+     },
+     {
+       title: 'Raise Concern',
+       image: require('../../src/assets/raiseconcern.png'),
+       backgroundColor: '#EA5E9C54',
+     },
+     {
+       title: 'Reports',
+       image: require('../../src/assets/reports.png'),
+       backgroundColor: '#9CD06954',
+     },
   ];
 
   const overviewCards = [
-    {
-      title: 'Payroll',
-      image: require('../../src/assets/dashboardIcon/payrollslide.png'),
-      backgroundColor: '#124A5A',
-    },
+    // {
+    //   title: 'Payroll',
+    //   image: require('../../src/assets/dashboardIcon/payrollslide.png'),
+    //   backgroundColor: '#124A5A',
+    // },
     {
       title: 'Apply Leave',
       image: require('../../src/assets/dashboardIcon/applyleaveslide.png'),
@@ -175,7 +154,6 @@ const DashboardScreen = ({navigation}) => {
                   {allRecord?.firstName
                     ? allRecord.firstName.substring(0, 2).toUpperCase()
                     : ''}
-                   ̰
                 </Text>
               </View>
             )}
@@ -207,14 +185,12 @@ const DashboardScreen = ({navigation}) => {
         </View>
 
         <View style={styles.headerRight}>
-          {/* <TouchableOpacity>
-            <Ionicons name="notifications" size={24} color="white" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>{getNotifications.length}</Text>
-            </View>
-          </TouchableOpacity> */}
           <TouchableOpacity onPress={() => setShowNotifications(true)}>
-            <Ionicons name="notifications" size={24} color="white" />
+           <Image
+  source={require('../assets/victorIconImage/bell.png')}
+  style={styles.eyeImage}
+  resizeMode="contain"
+/>
             {getNotifications.length > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.badgeText}>{getNotifications.length}</Text>
@@ -238,7 +214,11 @@ const DashboardScreen = ({navigation}) => {
                 <View style={styles.panelHeader}>
                   <Text style={styles.panelTitle}>Notifications</Text>
                   <TouchableOpacity onPress={handleOutsidePress}>
-                    <Ionicons name="close" size={20} color="black" />
+                    <Image
+  source={require('../assets/victorIconImage/bell.png')}
+  style={styles.eyeImage}
+  resizeMode="contain"
+/>
                   </TouchableOpacity>
                 </View>
                 {getNotifications.length > 0 ? (
@@ -293,6 +273,7 @@ const DashboardScreen = ({navigation}) => {
         </View>
       </View>
 
+
       {/* Content */}
       <ScrollView
         style={styles.content}
@@ -301,9 +282,6 @@ const DashboardScreen = ({navigation}) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Overview</Text>
-            {/* <TouchableOpacity>
-              <Text style={styles.viewMore}>View More</Text>
-            </TouchableOpacity> */}
           </View>
 
           <ScrollView
@@ -342,7 +320,7 @@ const DashboardScreen = ({navigation}) => {
         {/* Features */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Manage Work & Benefits in One Place
+            Manage Work & Benefits in One Place   
           </Text>
           {chunkedFeatureCards.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.featureRow}>
@@ -355,15 +333,13 @@ const DashboardScreen = ({navigation}) => {
                   ]}
                   onPress={() => {
                     const screenMap = {
+                      'My Payroll'   : 'MyPayRollScreen',
+                      Attendance: 'AttendanceScreen',
                       Leave: 'LeaveScreen',
                       'Raise Concern': 'RaiseConcernScreen',
-                      'My Payroll': 'MyPayRollScreen',
-                      Attendance: 'AttendanceScreen',
-                      Announcements: 'AnnouncementScreen',
-                      Reports: 'ReportScreen',
-                      'Learning & Development': 'LearningDevelopmentScreen',
-                      'Task & Management': 'TaskManagementScreen',
-                      Performance: 'PerfomanceScreen',
+                      Announcements : 'AnnouncementScreen',
+                      Reports      : 'ReportScreen',
+                     
                     };
                     const screen = screenMap[card.title];
                     if (screen) navigation.navigate(screen);
@@ -415,15 +391,13 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 12,
   },
-
   profilePicContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    // overflow: 'hidden',
-    position: 'relative', // <-- important
+    position: 'relative',
+    marginTop: 36,
   },
-
   plusIconContainer: {
     position: 'absolute',
     bottom: 40,
@@ -433,23 +407,15 @@ const styles = StyleSheet.create({
     padding: 4,
     borderWidth: 1,
     borderColor: '#ccc',
-    zIndex: 999, // high value
-    elevation: 10, // for Android
+    zIndex: 999,
+    elevation: 10,
   },
-
-  // profilePicContainer: {position: 'relative'},
   profilePic: {
     width: width * 0.14,
     height: width * 0.14,
     borderRadius: width * 0.07,
   },
-
-  icon: {
-    width: 12,
-    height: 12,
-    // zIndex:10,
-    // elevation: 10,
-  },
+  icon: {width: 12, height: 12},
   greeting: {
     fontSize: 18,
     fontWeight: '600',
@@ -511,8 +477,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  sectionTitle: {fontSize: 14, fontWeight: 'bold', color: '#000',marginTop:20,},
-  viewMore: {color: '#CE1C1C', fontSize: 10},
+  sectionTitle: {fontSize: 14, fontWeight: 'bold', color: '#000', marginTop: 20},
   overviewScroll: {flexDirection: 'row'},
   overviewCard: {
     borderRadius: 10,
@@ -534,26 +499,40 @@ const styles = StyleSheet.create({
     marginTop: 5,
     maxWidth: 80,
   },
+  // featureRow: {
+  //   flexDirection: 'row',
+  //   flexWrap: 'wrap',
+  //   justifyContent: 'space-between',
+  //   marginVertical: 12,
+  // },
+  // featureCard: {
+  //   width: width * 0.29,
+  //   borderRadius: 10,
+  //   padding: 12,
+  //   alignItems: 'center',
+  //   marginBottom: 12,
+  // },
   featureRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginVertical: 12,
-  },
-  featureCard: {
-    width: width * 0.29,
-    borderRadius: 10,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
+  flexDirection: 'row',
+  justifyContent: 'center', // ✅ दोनों cards ek sath chipke rahenge
+  marginVertical: 12,
+},
+
+featureCard: {
+  width: width * 0.29,
+  borderRadius: 12,
+  padding: 12,
+  alignItems: 'center',
+  marginHorizontal: 8,   // ✅ equal gap dono side
+  marginBottom: 12,
+},
+
   featureImage: {
     width: width * 0.1,
     height: width * 0.1,
     resizeMode: 'contain',
     backgroundColor: '#fff',
     borderRadius: 20,
-    // marginBottom: 10,
   },
   cardText: {
     fontSize: 12,
@@ -583,18 +562,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 10,
   },
-  logo: {
-    width: 120,
-    height: 40,
-  },
-  cardContainer: {
-    alignItems: 'center',
-    marginRight: 12,
-  },
+  logo: {width: 120, height: 40},
+  cardContainer: {alignItems: 'center', marginRight: 12},
   notificationPanel: {
     position: 'absolute',
-    top: 40, // icon ke neeche ka space
-    right: 10, // screen ke right se distance
+    top: 40,
+    right: 10,
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 10,
@@ -605,17 +578,13 @@ const styles = StyleSheet.create({
     zIndex: 10000,
     elevation: 9999,
   },
-
   panelHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  panelTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  panelTitle: {fontSize: 16, fontWeight: 'bold'},
   notificationText: {
     fontSize: 14,
     paddingVertical: 4,
@@ -632,19 +601,20 @@ const styles = StyleSheet.create({
     zIndex: 999,
     height: 200,
   },
-  
   initialsContainer: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50', // choose any color
+    backgroundColor: '#4CAF50',
   },
-  initialsText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+
+  eyeIcon: { position: 'absolute', right: 15 },
+  eyeImage: { width: 20, height: 20 },
+  initialsText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
 });
 
 export default DashboardScreen;
+
+
+

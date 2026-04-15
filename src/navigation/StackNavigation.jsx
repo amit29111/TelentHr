@@ -4,6 +4,7 @@ import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import BottomTab from './BottomTab';
 import SplashScreen from '../screens/SplashScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import LeaveRequestView from '../screens/leaveRequestView';
 
 const Stack = createStackNavigator();
@@ -25,6 +26,10 @@ const StackNavigation = () => {
         name="LoginScreen"
         component={LoginScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ForgotPasswordScreen"
+        component={ForgotPasswordScreen}
       />
       <Stack.Screen
         name="MainApp"

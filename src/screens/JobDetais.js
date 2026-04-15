@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
@@ -24,7 +24,11 @@ console.log('Probation Time:', employee.probationTime);
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color="#5B3A3A" />
+          <Image
+                     source={require('../assets/victorIconImage/arrowLeft.png')}
+                     style={[styles.eyeImage, {opacity: secureText ? 0.6 : 1}]}
+                     resizeMode="contain"
+                   />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={{ width: 24 }} />
@@ -139,15 +143,3 @@ const styles = StyleSheet.create({
   },
 });
 
-// import { View, Text } from 'react-native'
-// import React from 'react'
-
-// const JobDetais = () => {
-//   return (
-//     <View>
-//       <Text>JobDetais</Text>
-//     </View>
-//   )
-// }
-
-// export default JobDetais

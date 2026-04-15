@@ -1,4 +1,4 @@
-package com.talenthr
+package com.ezcompliance.ezhrmslite
 
 import android.app.Application
 import com.facebook.react.PackageList

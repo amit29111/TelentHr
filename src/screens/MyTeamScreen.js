@@ -76,10 +76,10 @@ const leaveData = [
 
 const MyTeamScreen = () => {
   const navigation = useNavigation();
-const handleBackPress = () => {
+  const handleBackPress = () => {
     try {
       // Navigate to the Dashboard tab and specify DashboardScreen
-      navigation.navigate('Dashboard', { screen: 'DashboardScreen' });
+      navigation.navigate('Dashboard', {screen: 'DashboardScreen'});
     } catch (error) {
       console.error('Navigation error:', error);
       navigation.goBack(); // Fallback to previous screen
@@ -114,7 +114,11 @@ const handleBackPress = () => {
       <ScrollView>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBackPress}>
-            <Icon name="arrow-back" size={normalize(24)} color="#fff" />
+            <Image
+              source={require('../assets/victorIconImage/eye.png')}
+              style={[styles.eyeImage, {opacity: secureText ? 0.6 : 1}]}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Team</Text>
         </View>
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#CCC',
     height: '100%',
     marginHorizontal: normalize(24),
-    marginLeft:25
+    marginLeft: 25,
   },
   rightSection: {flex: 2},
   circleWrapper: {justifyContent: 'center', alignItems: 'center'},
@@ -315,7 +319,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     // marginRight:15,
-     marginLeft:10,
+    marginLeft: 10,
   },
   innerCircle: {
     width: normalize(93),

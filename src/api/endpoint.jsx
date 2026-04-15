@@ -35,7 +35,16 @@ export const ENDPOINT = {
   },
   UPLOADPHOTO:{
     UPLOADPHOTO:(empId) => `employee/employeeImg/${empId}`
-  }
+  },
+
+
+  // Naya section add karein
+   CONCERN: {
+    ADD_CONCERN: 'resignation/addPreResignation',
+    GET_CONCERNS: (empId) =>
+      `resignation/getAllPreResignations?employeeId=${empId}`,
+  },
+};
 
   
-};
+

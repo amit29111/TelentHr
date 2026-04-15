@@ -2,12 +2,12 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const apiClient = axios.create({
-  baseURL: "http://40.82.136.223:3300/",
-  //  baseURL: "https://hrmsapi.ezcompliance.in/",
+   baseURL: "https://hrmsbackend.nagarsoftwaresolution.com/", ////nss
+  //  baseURL: "https://hrmsapi.ezcompliance.in/", // client.      
   headers: {
     "Content-Type": "application/json",
   },
-});
+});  
   
 
 apiClient.interceptors.request.use(async (config) => {
@@ -23,3 +23,8 @@ apiClient.interceptors.request.use(async (config) => {
 });
 
 export default apiClient;
+
+
+
+
+

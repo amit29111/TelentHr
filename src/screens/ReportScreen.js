@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import { useNavigation } from '@react-navigation/native';
+import {View, Text, StyleSheet, TouchableOpacity , Image} from 'react-native';
+// import AntDesign from 'react-native-vector-icons/AntDesign';
+import {useNavigation} from '@react-navigation/native';
 
 const ReportScreen = () => {
   const navigation = useNavigation();
@@ -14,7 +14,12 @@ const ReportScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-          <AntDesign name="arrowleft" size={24} color="#FFF" />
+          <Image
+  source={require('../assets/victorIconImage/arrowLeft.png')}
+  style={styles.eyeImage}
+  resizeMode="contain"
+/>
+         
         </TouchableOpacity>
         <Text style={styles.title}>Report Screen</Text>
       </View>
@@ -55,6 +60,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#5C3C45',
   },
+  eyeIcon: { position: 'absolute', right: 15 },
+  eyeImage: { width: 20, height: 20 },
 });
 
 export default ReportScreen;

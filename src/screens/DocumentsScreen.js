@@ -10,8 +10,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+
 import { useNavigation } from '@react-navigation/native';
 
 const DocumentsScreen = () => {
@@ -115,7 +114,11 @@ const DocumentsScreen = () => {
             ]);
           }}
         >
-          <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+           <Image
+                      source={require('../assets/victorIconImage/arrowLeft.png')}
+                      style={[styles.eyeImage, {opacity: secureText ? 0.6 : 1}]}
+                      resizeMode="contain"
+                    />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -126,7 +129,11 @@ const DocumentsScreen = () => {
       {/* Header */}
       <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-          <AntDesign name="arrowleft" size={24} color="#5C3C45" />
+           <Image
+            source={require('../assets/victorIconImage/arrowLeft.png')}
+            style={[styles.eyeImage, {opacity: secureText ? 0.6 : 1}]}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Documents</Text>
       </View>

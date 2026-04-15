@@ -1,14 +1,14 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 import { StyleSheet, Text, Image, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import DashboardScreen from '../screens/DashboardScreen';
 import CalendarScreen from '../screens/CalendarScreen';
-import MyTeamScreen from '../screens/MyTeamScreen';
-import WorkSpace from '../screens/WorkSpace';
+// import MyTeamScreen from '../screens/MyTeamScreen';
+// import WorkSpace from '../screens/WorkSpace';
 import MyPayRollScreen from '../screens/MyPayRollScreen';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import AnnouncementScreen from '../screens/AnnouncementScreen';
@@ -43,11 +43,11 @@ const AppStack = () => {
         options={{ headerShown: false }}
       />
 
-      {/* <Stack.Screen
+      <Stack.Screen
         name="CalendarScreen"
         component={CalendarScreen}
         options={{ headerShown: false }}
-      /> */}
+      />
       
       <Stack.Screen
         name="ProfileScreen"
@@ -142,8 +142,6 @@ const AppStack = () => {
         component={JobDetais}
         options={{ headerShown: false }}
       />
-
-  
 
     </Stack.Navigator>
   );
@@ -293,9 +291,9 @@ const BottomTab = () => {
       })}
     >
       <Tab.Screen name="Calendar" component={CalendarScreen} />
-      <Tab.Screen name="WorkSpace" component={WorkSpace} />
+      {/* <Tab.Screen name="WorkSpace" component={WorkSpace} /> */}
       <Tab.Screen name="Dashboard" component={AppStack} />
-      <Tab.Screen name="My Team" component={MyTeamScreen} />
+      {/* <Tab.Screen name="My Team" component={MyTeamScreen} /> */}
       <Tab.Screen
         name="Logout"
         component={View}
@@ -338,5 +336,3 @@ const styles = StyleSheet.create({
 export default BottomTab;
 
 
-
- 

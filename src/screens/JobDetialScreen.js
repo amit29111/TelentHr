@@ -10,7 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const { width } = Dimensions.get('window');
 
@@ -71,7 +71,11 @@ const JobDetialScreen = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#5A2A55" />
+           <Image
+            source={require('../assets/ArrowLeftBrown.png')}
+            style={styles.arrowLeft}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={{ width: 24 }} />
@@ -162,7 +166,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#5A2A55',
+    color: '#5C3C45',
     fontFamily: 'Lato',
   },
   scrollContainer: {
@@ -235,4 +239,5 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
     marginVertical: 12,
   },
+   arrowLeft: {width: 25,color: '#5C3C45', height: 25},
 });

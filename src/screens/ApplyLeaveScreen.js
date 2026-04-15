@@ -30,6 +30,7 @@ const ApplyLeaveScreen = () => {
           <Text style={styles.balanceText}>Balance</Text>
         </TouchableOpacity>
       </View>
+      
 
       <Text style={styles.subText}>Reporting Manager: NA</Text>
 

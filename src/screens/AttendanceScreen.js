@@ -20,6 +20,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation} from '@react-navigation/native';
 import moment from 'moment';
 import {Modal} from 'react-native-paper';
+import {fetchEmployeeById} from '../redux/employeeSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
 const {width} = Dimensions.get('window');
 
@@ -116,6 +118,7 @@ const AttendanceCard = ({item}) => {
 };
 
 const AttendanceScreen = () => {
+  const dispatch = useDispatch();
   const [mode, setMode] = useState('Home');
   const [isLoadingIn, setIsLoadingIn] = useState(false);
   const [isLoadingOut, setIsLoadingOut] = useState(false);
@@ -124,196 +127,193 @@ const AttendanceScreen = () => {
     hoursElapsed: '0',
     percentage: '0',
   });
-  const [checkInTime, setCheckInTime] = useState('');
+  // const [checkInTime, setCheckInTime] = useState('');
   const [checkOutTime, setCheckOutTime] = useState('');
   const [attendaceRecord, setAttendaceRecord] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const progress = 0.75;
 
-  // useEffect(() => {
-  //   const checkClockIn = async () => {
-  //     try {
-  //       const empId = await AsyncStorage.getItem('empId');
-  //       const url = ENDPOINT.BREAK.CHECKCHECKIN(empId);
-  //       const response = await apiClient.get(url);
-
-  //       if (response.status === 200 || response.status === 201) {
-  //         const data = response.data.data;
-  //         // console.log('data', data.trackStatus);
-  //         setCheckInSuccess(data?.trackStatus);
-
-  //         // Helper functions
-  //         const timeStringToSeconds = timeStr => {
-  //           const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-  //           return hours * 3600 + minutes * 60 + seconds;
-  //         };
-
-  //         const secondsToHMS = totalSeconds => {
-  //           const hours = Math.floor(totalSeconds / 3600);
-  //           const minutes = Math.floor((totalSeconds % 3600) / 60);
-  //           const seconds = totalSeconds % 60;
-  //           return `${hours.toString().padStart(2, '0')}:${minutes
-  //             .toString()
-  //             .padStart(2, '0')}:${seconds?.toString().padStart(2, '0')}`;
-  //         };
-  //         const currentTimeIST = new Date().toLocaleTimeString('en-IN', {
-  //           timeZone: 'Asia/Kolkata',
-  //           hour12: false,
-  //         });
-
-  //         const checkInUTC = new Date(data?.checkIn)
-  //           .toISOString()
-  //           .split('T')[1]
-  //           .split('.')[0];
-  //         setCheckInTime(checkInUTC);
-  //         const checkOutUTC =
-  //           data?.checkOut &&
-  //           new Date(data?.checkOut).toISOString().split('T')[1].split('.')[0];
-  //         setCheckOutTime(checkOutUTC);
-  //         const currentSecs = timeStringToSeconds(currentTimeIST);
-  //         const checkInSecs = timeStringToSeconds(checkInUTC);
-  //         let diffSecs = currentSecs - checkInSecs;
-  //         let totalBreakDurationMs = 0;
-  //         if (Array.isArray(data.breaks)) {
-  //           data.breaks.forEach((breakItem, index) => {
-  //             const breakIn = new Date(breakItem.breakIn);
-  //             const breakOut = new Date(breakItem.breakOut);
-
-  //             if (!isNaN(breakIn) && !isNaN(breakOut)) {
-  //               const duration = breakOut - breakIn;
-  //               totalBreakDurationMs += duration;
-  //             }
-  //           });
-  //         }
-
-  //         const breakSecs = Math.floor(totalBreakDurationMs / 1000);
-  //         const finalWorkingSecs = diffSecs - breakSecs;
-
-  //         const formattedWorkingTime = secondsToHMS(finalWorkingSecs);
-
-  //         // ✅ Set workProgress state
-  //         const [hh, mm, ss] = formattedWorkingTime?.split(':').map(Number);
-  //         const hoursDecimal = hh + mm / 60 + ss / 3600;
-  //         const totalRequiredHours = 8;
-  //         const progressPercent = (
-  //           (hoursDecimal / totalRequiredHours) *
-  //           100
-  //         ).toFixed(2);
-
-  //         setWorkProgress({
-  //           hoursElapsed: hoursDecimal.toFixed(2),
-  //           percentage: progressPercent,
-  //         });
-  //       } else {
-  //         Alert.alert('Error', response.data.message || 'Failed to clock in.');
-  //       }
-  //     } catch (error) {
-  //       setCheckInSuccess('startDay');
-  //       console.log(error);
-  //     } finally {
-  //       setIsLoadingIn(false);
-  //     }
-  //   };
-
-  //   checkClockIn();
-  // }, []);
+  const [checkInTime, setCheckInTime] = useState(null);
+  const [duration, setDuration] = useState('00:00:00');
+  const { employee, loading, error } = useSelector((state) => state.employee);
+  console.log('Employee Data:', employee?.shiftId?.compulsoryWorkHours );
+  const [requiredHours, setRequiredHours] = useState(8.333); // Default value
+  const totalRequiredHours = requiredHours;
 
   useEffect(() => {
-  const checkClockIn = async () => {
-    try {
-      const empId = await AsyncStorage.getItem('empId');
-      const url = ENDPOINT.BREAK.CHECKCHECKIN(empId);
-      const response = await apiClient.get(url);
+    let timer = null;
 
-      if (response.status === 200 || response.status === 201) {
-        const data = response.data.data;
-        setCheckInSuccess(data?.trackStatus);
+    // Jab user checked-in ho aur break par na ho tab timer chalega
+    if (checkInSuccess === 'checkIn' || checkInSuccess === 'breakOut') {
+      timer = setInterval(() => {
+        if (checkInTime) {
+          // 1. Current Time and Start Time setup
+          const now = new Date();
+          const [hh, mm, ss] = checkInTime.split(':').map(Number);
 
-        // Helper functions
-        const timeStringToSeconds = timeStr => {
-          const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-          return hours * 3600 + minutes * 60 + seconds;
-        };
+          const startTime = new Date();
+          startTime.setHours(hh, mm, ss);
 
-        const secondsToHMS = totalSeconds => {
-          const hours = Math.floor(totalSeconds / 3600);
-          const minutes = Math.floor((totalSeconds % 3600) / 60);
-          const seconds = totalSeconds % 60;
-          return `${hours.toString().padStart(2, '0')}:${minutes
-            .toString()
-            .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        };
+          // 2. Time Difference in Seconds
+          const diffMs = now - startTime;
+          const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
 
-        const currentTimeIST = new Date().toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour12: false,
-        });
+          // 3. Format to HH:MM:SS
+          const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+          const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
+            2,
+            '0',
+          );
+          const s = String(totalSeconds % 60).padStart(2, '0');
 
-        const checkInUTC = new Date(data?.checkIn)
-          .toISOString()
-          .split('T')[1]
-          .split('.')[0];
-        setCheckInTime(checkInUTC);
+          const formattedHMS = `${h}:${m}:${s}`; // Ab seconds bhi aayenge
 
-        const checkOutUTC =
-          data?.checkOut &&
-          new Date(data?.checkOut).toISOString().split('T')[1].split('.')[0];
-        setCheckOutTime(checkOutUTC);
+          // 4. Calculate Percentage (Decimal hours for accuracy)
+          const hoursDecimal = totalSeconds / 3600;
+          const progressPercent = (
+            (hoursDecimal / totalRequiredHours) *
+            100
+          ).toFixed(2);
 
-        const currentSecs = timeStringToSeconds(currentTimeIST);
-        const checkInSecs = timeStringToSeconds(checkInUTC);
-        let diffSecs = currentSecs - checkInSecs;
-
-        let totalBreakDurationMs = 0;
-        if (Array.isArray(data.breaks)) {
-          data.breaks.forEach(breakItem => {
-            const breakIn = new Date(breakItem.breakIn);
-            const breakOut = new Date(breakItem.breakOut);
-
-            if (!isNaN(breakIn) && !isNaN(breakOut)) {
-              const duration = breakOut - breakIn;
-              totalBreakDurationMs += duration;
-            }
+          // Update State
+          setWorkProgress({
+            hoursElapsed: formattedHMS, // HH:MM:SS format
+            percentage: Math.min(progressPercent, 100),
           });
         }
+      }, 1000); // Har 1 second mein chalega
+    } else if (checkInSuccess === 'startDay' || !checkInSuccess) {
+      // Agar check-out ho gaya hai ya day start nahi hua to reset
+      setWorkProgress({hoursElapsed: '00:00:00', percentage: '0'});
+    }
 
-        const breakSecs = Math.floor(totalBreakDurationMs / 1000);
-        const finalWorkingSecs = diffSecs - breakSecs;
+    return () => clearInterval(timer);
+  }, [checkInTime, checkInSuccess]);
 
-        // HH:MM:SS format
-        const formattedWorkingTime = secondsToHMS(finalWorkingSecs);
 
-        // सिर्फ HH:MM निकालना
-        const formattedHHMM = formattedWorkingTime.slice(0, 5);
 
-        // Decimal hours for percentage calculation
-        const [hh, mm, ss] = formattedWorkingTime.split(':').map(Number);
-        const hoursDecimal = hh + mm / 60 + ss / 3600;
+  useEffect(() => {
+    const checkClockIn = async () => {
+      try {
+        const empId = await AsyncStorage.getItem('empId');
+        const url = ENDPOINT.BREAK.CHECKCHECKIN(empId);
+        const response = await apiClient.get(url);
 
-        const totalRequiredHours = 8;
-        const progressPercent = (
-          (hoursDecimal / totalRequiredHours) *
-          100
-        ).toFixed(2);
+        if (response.status === 200 || response.status === 201) {
+          const data = response.data.data;
+          setCheckInSuccess(data?.trackStatus);
 
-        setWorkProgress({
-          hoursElapsed: formattedHHMM, // अब HH:MM format में
-          percentage: progressPercent,
-        });
-      } else {
-        Alert.alert('Error', response.data.message || 'Failed to clock in.');
+          // Helper functions
+          const timeStringToSeconds = timeStr => {
+            const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+            return hours * 3600 + minutes * 60 + seconds;
+          };
+
+          const secondsToHMS = totalSeconds => {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes
+              .toString()
+              .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+          };
+
+          const currentTimeIST = new Date().toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour12: false,
+          });
+
+          const checkInUTC = new Date(data?.checkIn)
+            .toISOString()
+            .split('T')[1]
+            .split('.')[0];
+          setCheckInTime(checkInUTC);
+
+          const checkOutUTC =
+            data?.checkOut &&
+            new Date(data?.checkOut).toISOString().split('T')[1].split('.')[0];
+          setCheckOutTime(checkOutUTC);
+
+          const currentSecs = timeStringToSeconds(currentTimeIST);
+          const checkInSecs = timeStringToSeconds(checkInUTC);
+          let diffSecs = currentSecs - checkInSecs;
+
+          let totalBreakDurationMs = 0;
+          if (Array.isArray(data.breaks)) {
+            data.breaks.forEach(breakItem => {
+              const breakIn = new Date(breakItem.breakIn);
+              const breakOut = new Date(breakItem.breakOut);
+
+              if (!isNaN(breakIn) && !isNaN(breakOut)) {
+                const duration = breakOut - breakIn;
+                totalBreakDurationMs += duration;
+              }
+            });
+          }
+
+          const breakSecs = Math.floor(totalBreakDurationMs / 1000);
+          const finalWorkingSecs = diffSecs - breakSecs;
+
+          // HH:MM:SS format
+          const formattedWorkingTime = secondsToHMS(finalWorkingSecs);
+
+          // सिर्फ HH:MM निकालना
+          const formattedHHMM = formattedWorkingTime.slice(0, 5);
+
+          // Decimal hours for percentage calculation
+          const [hh, mm, ss] = formattedWorkingTime.split(':').map(Number);
+          const hoursDecimal = hh + mm / 60 + ss / 3600;
+
+          // const totalRequiredHours = 8.333;
+          const progressPercent = (
+            (hoursDecimal / totalRequiredHours) *
+            100
+          ).toFixed(2);
+
+          setWorkProgress({
+            hoursElapsed: formattedHHMM, // अब HH:MM format में
+            percentage: progressPercent,
+          });
+        } else {
+          Alert.alert('Error', response.data.message || 'Failed to clock in.');
+        }
+      } catch (error) {
+        setCheckInSuccess('startDay');
+        console.log(error);
+      } finally {
+        setIsLoadingIn(false);
       }
-    } catch (error) {
-      setCheckInSuccess('startDay');
-      console.log(error);
-    } finally {
-      setIsLoadingIn(false);
+    };
+
+    checkClockIn();
+  }, []);
+
+ useEffect(() => {
+  const loadData = async () => {
+    const empId = await AsyncStorage.getItem('empId');
+    if (empId) {
+      try {
+        const result = await dispatch(fetchEmployeeById(empId)).unwrap();
+        
+        // Agar response minutes mein hai (e.g. 500)
+        const shiftMinutes = result?.shiftId?.compulsoryWorkHours; 
+        
+        if (shiftMinutes) {
+          // Minutes ko hours mein convert karein (Decimal format mein)
+          const hoursInDecimal = shiftMinutes / 60; 
+          
+          console.log("Converted Hours:", hoursInDecimal);
+          
+          // State mein set karein taaki Progress Circle aur Timer ise use kar sakein
+          setRequiredHours(hoursInDecimal);
+        }
+      } catch (err) {
+        console.log("Error fetching employee:", err);
+      }
     }
   };
-
-  checkClockIn();
-}, []);
-
+  loadData();
+}, [dispatch]);
 
   useEffect(() => {
     const chartIn = async () => {
@@ -404,6 +404,10 @@ const AttendanceScreen = () => {
       });
 
       if (response.status === 200 || response.status === 201) {
+        const now = new Date();
+        const currentTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
+
+        setCheckInTime(currentTime); // Timer start karne ke liye
         setCheckInSuccess('checkIn');
         Alert.alert('Success', response.data.message || 'Break in successful!');
       } else {
@@ -438,6 +442,7 @@ const AttendanceScreen = () => {
         orgId: orgId,
         userLat: '22.7487527',
         userLng: '75.8957078',
+        reportingType: 'mobile'
       });
 
       if (response.status === 200 || response.status === 201) {
@@ -538,6 +543,7 @@ const AttendanceScreen = () => {
   return (
     <ScrollView
       style={styles.container}
+      nestedScrollEnabled={true}
       contentContainerStyle={{paddingBottom: 20}}>
       {/* Header */}
       <View style={styles.headerTextContainer}>
@@ -725,26 +731,26 @@ const AttendanceScreen = () => {
                 </TouchableOpacity>
               </>
             )}
-           {checkInSuccess === 'breakIn' && (
-    <TouchableOpacity
-      style={[styles.clockBtn, isLoadingOut && styles.disabledBtn]}
-      onPress={handleBreakOut}
-      disabled={isLoadingOut}>
-      <View style={styles.buttonContent}>
-        {isLoadingOut ? (
-          <ActivityIndicator size="small" color="#FFF" />
-        ) : (
-          <>
-            <Image
-              source={require('../assets/checkarrowone.png')}
-              style={styles.buttonIcon}
-            />
-            <Text style={styles.btnText}>Break Out</Text>
-          </>
-        )}
-      </View>
-    </TouchableOpacity>
-  )}
+            {checkInSuccess === 'breakIn' && (
+              <TouchableOpacity
+                style={[styles.clockBtn, isLoadingOut && styles.disabledBtn]}
+                onPress={handleBreakOut}
+                disabled={isLoadingOut}>
+                <View style={styles.buttonContent}>
+                  {isLoadingOut ? (
+                    <ActivityIndicator size="small" color="#FFF" />
+                  ) : (
+                    <>
+                      <Image
+                        source={require('../assets/checkarrowone.png')}
+                        style={styles.buttonIcon}
+                      />
+                      <Text style={styles.btnText}>Break Out</Text>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
 
             {checkInSuccess === 'breakOut' && (
               <>
@@ -788,32 +794,32 @@ const AttendanceScreen = () => {
             )}
           </View>
           <Modal
-          visible={modalVisible}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalText}>
-                Are you sure you want to check out?
-              </Text>
+            visible={modalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setModalVisible(false)}>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalText}>
+                  Are you sure you want to check out?
+                </Text>
 
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  style={styles.cancelButton}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    style={styles.cancelButton}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={handleClockOut}
-                  style={styles.confirmButton}>
-                  <Text style={styles.confirmText}>Confirm</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleClockOut}
+                    style={styles.confirmButton}>
+                    <Text style={styles.confirmText}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
         </View>
 
         {/* Attendance Section */}
@@ -850,6 +856,7 @@ const AttendanceScreen = () => {
             data={attendaceRecord}
             renderItem={({item}) => <AttendanceCard item={item} />}
             keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
             contentContainerStyle={{
               paddingHorizontal: 10,
               paddingBottom: 20,
@@ -857,7 +864,6 @@ const AttendanceScreen = () => {
             }}
           />
         </View>
-        
       </View>
     </ScrollView>
   );
@@ -1043,11 +1049,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  marginBottom: 4,
-  justifyContent:'center'
-},
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    justifyContent: 'center',
+  },
   btnText: {
     color: '#FFF',
     fontWeight: '600',
@@ -1161,69 +1167,241 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   modalOverlay: {
-  flex: 1,
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-},
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
 
+  modalContent: {
+    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 16,
+    width: '85%',
+    height: 150,
+    justifyContent: 'center', // ensures vertical alignment inside modal box
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
 
-modalContent: {
-  backgroundColor: '#fff',
-  padding: 24,
-  borderRadius: 16,
-  width: '85%',
-  height: 150,
-  justifyContent: 'center', // ensures vertical alignment inside modal box
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 8,
-  elevation: 10,
-},
+  modalText: {
+    fontSize: 18,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: 'black',
+    fontWeight: '500',
+  },
 
-modalText: {
-  fontSize: 18,
-  marginBottom: 20,
-  textAlign: 'center',
-  color: 'black',
-  fontWeight: '500',
-},
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
 
-modalButtons: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  width: '100%',
-},
+  cancelButton: {
+    flex: 1,
+    padding: 12,
+    marginRight: 10,
+    backgroundColor: '#eee',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
 
-cancelButton: {
-  flex: 1,
-  padding: 12,
-  marginRight: 10,
-  backgroundColor: '#eee',
-  borderRadius: 8,
-  alignItems: 'center',
-},
+  confirmButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#E66957',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
 
-confirmButton: {
-  flex: 1,
-  padding: 12,
-  backgroundColor: '#E66957',
-  borderRadius: 8,
-  alignItems: 'center',
-},
+  cancelText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
 
-cancelText: {
-  color: '#333',
-  fontWeight: 'bold',
-},
-
-confirmText: {
-  color: '#fff',
-  fontWeight: 'bold',
-},
-
+  confirmText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
 
 export default AttendanceScreen;
+
+
+
+// import React, {useState} from "react";
+// import {
+//   View,
+//   Text,
+//   Image,
+//   StyleSheet,
+//   TouchableOpacity,
+//   ScrollView
+// } from "react-native";
+
+// const ProfileScreen = () => {
+
+//   const [activeTab, setActiveTab] = useState("Attendance");
+
+//   const attendanceData = [
+//     {label: "Total Days", value: "28"},
+//     {label: "Total Working Days", value: "28"},
+//     {label: "Total Holidays", value: "0"},
+//     {label: "Total Days Present", value: "01"},
+//     {label: "Total Days Absent", value: "27"},
+//     {label: "Total Leave Days", value: "0"},
+//     {label: "Total LWS Days", value: "0"},
+//     {label: "Total Paid Half Days", value: "0"},
+//     {label: "Total Unpaid Half Days", value: "0"},
+//     {label: "Average Checkin", value: "N/A"},
+//   ];
+
+//   return (
+//     <ScrollView style={styles.container}>
+
+//       {/* Profile Header */}
+//       <View style={styles.profileCard}>
+//         <Image
+//           source={{uri: "https://i.pravatar.cc/300"}}
+//           style={styles.avatar}
+//         />
+
+//         <Text style={styles.name}>Tanishka Tyagi</Text>
+//         <Text style={styles.role}>UI/UX Designer</Text>
+//         <Text style={styles.empId}>E2031</Text>
+
+//         <Text style={styles.info}>📧 tanishka.tyagi@talentcompliance.in</Text>
+//         <Text style={styles.info}>📞 +91 9068359688</Text>
+//         <Text style={styles.info}>📍 Sector 134, Noida, Uttar Pradesh</Text>
+//       </View>
+
+//       {/* Tabs */}
+//       <View style={styles.tabs}>
+//         {["Personal Info","Job Details","Attendance","Leaves"].map(tab => (
+//           <TouchableOpacity key={tab} onPress={()=>setActiveTab(tab)}>
+//             <Text style={[
+//               styles.tabText,
+//               activeTab === tab && styles.activeTab
+//             ]}>
+//               {tab}
+//             </Text>
+//           </TouchableOpacity>
+//         ))}
+//       </View>
+
+//       {/* Attendance Card */}
+//       {activeTab === "Attendance" && (
+//         <View style={styles.card}>
+//           <Text style={styles.cardTitle}>Monthly Attendance Summary</Text>
+
+//           {attendanceData.map((item,index)=>(
+//             <View key={index} style={styles.row}>
+//               <Text style={styles.label}>{item.label}</Text>
+//               <Text style={styles.value}>{item.value}</Text>
+//             </View>
+//           ))}
+
+//         </View>
+//       )}
+
+//     </ScrollView>
+//   );
+// };
+
+// export default ProfileScreen;
+
+// const styles = StyleSheet.create({
+
+//   container:{
+//     flex:1,
+//     backgroundColor:"#f3f4f6"
+//   },
+
+//   profileCard:{
+//     backgroundColor:"#fff",
+//     alignItems:"center",
+//     padding:20,
+//     borderBottomLeftRadius:20,
+//     borderBottomRightRadius:20
+//   },
+
+//   avatar:{
+//     width:80,
+//     height:80,
+//     borderRadius:40,
+//     marginBottom:10
+//   },
+
+//   name:{
+//     fontSize:18,
+//     fontWeight:"bold"
+//   },
+
+//   role:{
+//     color:"#555"
+//   },
+
+//   empId:{
+//     color:"#888",
+//     marginBottom:10
+//   },
+
+//   info:{
+//     fontSize:13,
+//     color:"#444",
+//     marginTop:2
+//   },
+
+//   tabs:{
+//     flexDirection:"row",
+//     justifyContent:"space-around",
+//     backgroundColor:"#fff",
+//     paddingVertical:10,
+//     marginTop:10
+//   },
+
+//   tabText:{
+//     color:"#555",
+//     fontSize:14
+//   },
+
+//   activeTab:{
+//     color:"#ef4444",
+//     borderBottomWidth:2,
+//     borderBottomColor:"#ef4444",
+//     paddingBottom:4
+//   },
+
+//   card:{
+//     backgroundColor:"#fff",
+//     margin:15,
+//     borderRadius:10,
+//     padding:15
+//   },
+
+//   cardTitle:{
+//     fontSize:16,
+//     fontWeight:"600",
+//     marginBottom:10
+//   },
+
+//   row:{
+//     flexDirection:"row",
+//     justifyContent:"space-between",
+//     paddingVertical:6
+//   },
+
+//   label:{
+//     color:"#ef4444"
+//   },
+
+//   value:{
+//     color:"#333"
+//   }
+
+// });

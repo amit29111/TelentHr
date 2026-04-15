@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import { useNavigation } from '@react-navigation/native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
+// import AntDesign from 'react-native-vector-icons/AntDesign';
+import {useNavigation} from '@react-navigation/native';
 
 const LearningDevelopmentScreen = () => {
   const navigation = useNavigation();
@@ -9,12 +9,18 @@ const LearningDevelopmentScreen = () => {
   const handleBackPress = () => {
     navigation.navigate('DashboardScreen');
   };
-
   return (
+
+   
+    
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-          <AntDesign name="arrowleft" size={24} color="#FFF" />
+          <Image
+            source={require('../assets/victorIconImage/arrowLeft.png')}
+            style={[styles.eyeImage, {opacity: secureText ? 0.6 : 1}]}
+            resizeMode="contain"
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Learning & Development Screen</Text>
       </View>

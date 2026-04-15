@@ -10,7 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 const LeaveRequestView = () => {
   const teamMembers = [
@@ -48,24 +48,21 @@ const LeaveRequestView = () => {
     },
   ];
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({item}) => (
     <View style={styles.card}>
-
       <View style={styles.requestCard}>
         <View style={styles.actionButtonsLeft}>
           <TouchableOpacity
             style={styles.approveBtnSmall}
             accessibilityRole="button"
-            accessibilityLabel="Approve leave request"
-          >
+            accessibilityLabel="Approve leave request">
             <Text style={styles.btnText}>Approve</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.rejectBtnSmall}
             accessibilityRole="button"
-            accessibilityLabel="Reject leave request"
-          >
-            <Text style={[styles.btnText, { color: '#FFFFFF' }]}>Reject</Text>
+            accessibilityLabel="Reject leave request">
+            <Text style={[styles.btnText, {color: '#FFFFFF'}]}>Reject</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.requestContent}>
@@ -74,7 +71,7 @@ const LeaveRequestView = () => {
             style={styles.requestAvatarLeft}
             defaultSource={require('../../src/assets/first.png')} // Add fallback image
           />
-          <View style={{ flex: 1, marginLeft: 16 }}>
+          <View style={{flex: 1, marginLeft: 16}}>
             <Text style={styles.tag}>Human Resources</Text>
             <Text style={styles.requestName}>{item.name}</Text>
             <Text style={styles.requestRole}>{item.role}</Text>
@@ -158,13 +155,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     borderWidth: 3,
     borderColor: '#DBC2CE',
-    height:168,
+    height: 168,
   },
   actionButtonsLeft: {
     flexDirection: 'row',
