@@ -50,11 +50,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 import appReducer from './slice'; // Importing the consolidated appSlice
 import {employeeReducer} from './employeeSlice'; // Assuming this exists in your project
+import highlightsReducer from './employeeHighlightsSlice';
+
 
 export const store = configureStore({
   reducer: {
     auth: appReducer, // Use appReducer for all app-related state, including organization data
     employee: employeeReducer, // Employee reducer remains unchanged
+    highlights: highlightsReducer,
   },
 });
 

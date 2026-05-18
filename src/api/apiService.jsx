@@ -145,6 +145,16 @@ const apiService = {
       throw handleError(error);
     }
   },
+  async getEmployeeHighlights() {
+  try {
+    const response = await apiClient.get(
+      '/employee/getEmployeeHighlights'
+    );
+    return response.data;
+  } catch (error) {
+    throw handleError(error);
+  }
+},
 
 };
 

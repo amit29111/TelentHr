@@ -69,19 +69,21 @@ const AnnouncementScreen = () => {
     <View style={styles.container}>
       {/* Header with Notification */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
-            <Image
+        <TouchableOpacity style={styles.iconBtn} onPress={handleBackPress}>
+          <Image
             source={require('../assets/victorIconImage/arrowLeft.png')}
-            style={styles.eyeImage}
+            style={styles.icon}
             resizeMode="contain"
           />
         </TouchableOpacity>
         <Text style={styles.title}>Announcement Screen</Text>
 
-        <TouchableOpacity onPress={() => setShowNotifications(true)}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => setShowNotifications(true)}>
           <Image
             source={require('../assets/victorIconImage/bell.png')}
-            style={styles.eyeImage}
+            style={styles.icon}
             resizeMode="contain"
           />
           {getNotifications.length > 0 && (
@@ -105,7 +107,7 @@ const AnnouncementScreen = () => {
               <TouchableOpacity onPress={handleOutsidePress}>
                 <Image
                   source={require('../assets/victorIconImage/arrowLeft.png')}
-                  style={styles.arrowLeft }
+                  style={styles.arrowLeft}
                   resizeMode="contain"
                 />
               </TouchableOpacity>
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#452300',
     minHeight: 80,
   },
-  title: {color: '#fff', fontSize: 18, fontWeight: '600'},
+  title: {color: '#fff', fontSize: 18, fontWeight: '600', top:10},
   notificationBadge: {
     position: 'absolute',
     top: -6,
@@ -200,8 +202,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-   eyeIcon: { position: 'absolute', right: 15 },
-  arrowLeft: { width: 20, height: 20 },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)', // subtle circle
+    top:10
+  },
+  icon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
 });
 
 export default AnnouncementScreen;

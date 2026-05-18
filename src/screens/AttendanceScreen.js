@@ -558,7 +558,7 @@ const AttendanceScreen = () => {
 
       {/* Toggle */}
       <View style={styles.toggleContentHeader}>
-        <LinearGradient
+        {/* <LinearGradient
           colors={['#ED8C85', '#8C86BD']}
           style={styles.toggleContainer}
           start={{x: 0, y: 0}}
@@ -609,7 +609,7 @@ const AttendanceScreen = () => {
               </Text>
             </View>
           </TouchableOpacity>
-        </LinearGradient>
+        </LinearGradient> */}
       </View>
 
       {/* Main Content */}
@@ -823,12 +823,9 @@ const AttendanceScreen = () => {
         </View>
 
         {/* Attendance Section */}
-        <View style={styles.AttendanceSection}>
+        {/* <View style={styles.AttendanceSection}>
           <View style={styles.attendanceHeader}>
             <Text style={styles.attendanceTitle}>Attendance</Text>
-            {/* <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Export Report</Text>
-            </TouchableOpacity> */}
           </View>
           <BarChart
             data={attendanceChartData}
@@ -842,15 +839,11 @@ const AttendanceScreen = () => {
             width={width - 40}
             height={120}
           />
-        </View>
+        </View> */}
 
-        {/* Attendance List */}
-        <View style={styles.attendanceListContainer}>
+        {/* <View style={styles.attendanceListContainer}>
           <View style={styles.listHeader}>
             <Text style={styles.headerTitle}>Attendance Data</Text>
-            {/* <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity> */}
           </View>
           <FlatList
             data={attendaceRecord}
@@ -863,7 +856,7 @@ const AttendanceScreen = () => {
               gap: 10,
             }}
           />
-        </View>
+        </View> */}
       </View>
     </ScrollView>
   );

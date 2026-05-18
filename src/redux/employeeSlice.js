@@ -3,6 +3,18 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import apiService from '../api/apiService';
 
 // Async Thunks
+export const fetchEmployeeHighlights = createAsyncThunk(
+  'employee/fetchHighlights',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await apiService.getEmployeeHighlights();
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.message || 'Failed');
+    }
+  }
+);
+
 export const fetchEmployeeById = createAsyncThunk(
   'employee/fetchById',
   async (empId, { rejectWithValue }) => {
@@ -45,6 +57,7 @@ const employeeSlice = createSlice({
   initialState: {
     employeeData: null,
     notificationData: null,
+    highlightsData: [],
     loading: false,
     error: null,
   },
@@ -74,7 +87,18 @@ const employeeSlice = createSlice({
       .addCase(fetchEmployeeNotification.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-      });
+      })
+      .addCase(fetchEmployeeHighlights.pending, (state) => {
+      state.loading = true;
+    })
+    .addCase(fetchEmployeeHighlights.fulfilled, (state, action) => {
+      state.loading = false;
+      state.highlightsData = action.payload.data;
+    })
+    .addCase(fetchEmployeeHighlights.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    })
   },
 });
 

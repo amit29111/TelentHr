@@ -16,9 +16,10 @@ import {useDispatch, useSelector} from 'react-redux';
 import {
   fetchEmployeeById,
   fetchEmployeeNotification,
+  fetchEmployeeHighlights
 } from '../redux/employeeSlice';
 import {fetchByOrg} from '../redux/slice';
-import {Modal} from 'react-native-paper';
+import {Modal} from 'react-native';
 
 const {width} = Dimensions.get('window');
 
@@ -30,6 +31,13 @@ const DashboardScreen = ({navigation}) => {
   const employee = useSelector(state => state?.employee?.employeeData);
   const notifications = useSelector(state => state?.employee?.notificationData);
   const orgDetails = useSelector(state => state.auth.employeeData);
+ const highlightsData = useSelector(
+  state => state.employee.highlightsData
+);
+
+const loading = useSelector(
+  state => state.employee.loading
+);
 
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -47,6 +55,7 @@ const DashboardScreen = ({navigation}) => {
           dispatch(fetchEmployeeById(empId));
           dispatch(fetchByOrg(orgId));
           dispatch(fetchEmployeeNotification(empId));
+          dispatch(fetchEmployeeHighlights());
         }
       } catch (e) {
         console.log('❌ Error fetching empId:', e);
@@ -54,6 +63,14 @@ const DashboardScreen = ({navigation}) => {
     };
     fetchData();
   }, [dispatch]);
+
+  useEffect(() => {
+  console.log("appppppppp Highlights Data:", highlightsData);
+}, [highlightsData]);
+
+const filteredHighlights = highlightsData?.filter(
+  item => item.type === 'birthday' || item.type === 'work_anniversary'
+);
 
   useEffect(() => {
     if (employee) setAllRecord(employee);
@@ -210,7 +227,8 @@ const DashboardScreen = ({navigation}) => {
             <Pressable
               style={styles.modalBackground}
               onPress={handleOutsidePress}>
-              <Pressable style={styles.notificationPanel}>
+              <Pressable style={styles.notificationPanel} 
+              onPress={(e) => e.stopPropagation()}>
                 <View style={styles.panelHeader}>
                   <Text style={styles.panelTitle}>Notifications</Text>
                   <TouchableOpacity onPress={handleOutsidePress}>
@@ -240,7 +258,7 @@ const DashboardScreen = ({navigation}) => {
       </View>
 
       {/* Birthday Section */}
-      <View style={styles.birthdaySection}>
+      {/* <View style={styles.birthdaySection}>
         <View style={styles.birthdayCard}>
           <View style={styles.birthdayHeader}>
             <Image
@@ -271,7 +289,44 @@ const DashboardScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
         </View>
+      </View> */}
+
+      <View style={styles.birthdaySection}>
+  <View style={styles.birthdayCard}>
+    <Text style={styles.cardTitle}>Birthdays & Work Anniversaries</Text>
+
+    {filteredHighlights?.map((item, index) => (
+      <View key={index} style={styles.eventRow}>
+        
+        {/* LEFT ICON */}
+        <Text style={styles.eventIcon}>
+          {item.type === 'birthday' ? '🎉' : '🏆'}
+        </Text>
+
+        {/* CENTER CONTENT */}
+        <View style={{flex: 1}}>
+          <Text style={styles.eventTitle}>
+            {item.title}
+          </Text>
+          <Text style={styles.eventSubtitle}>
+            {item.details}
+          </Text>
+          <Text style={styles.eventDate}>
+            {new Date(item.date).toDateString()}
+          </Text>
+        </View>
+
+        {/* RIGHT BUTTON */}
+        <TouchableOpacity>
+          <Text style={styles.actionText}>
+            {item.type === 'birthday' ? 'Send Wishes' : 'Congratulate'}
+          </Text>
+        </TouchableOpacity>
+
       </View>
+    ))}
+  </View>
+</View>
 
 
       {/* Content */}
@@ -535,7 +590,7 @@ featureCard: {
     borderRadius: 20,
   },
   cardText: {
-    fontSize: 12,
+    fontSize: 10,
     textAlign: 'center',
     color: '#1B1D4D',
     maxWidth: 80,
@@ -566,8 +621,8 @@ featureCard: {
   cardContainer: {alignItems: 'center', marginRight: 12},
   notificationPanel: {
     position: 'absolute',
-    top: 40,
-    right: 10,
+    top: 90,
+    right: 30,
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 10,
@@ -612,6 +667,46 @@ featureCard: {
   eyeIcon: { position: 'absolute', right: 15 },
   eyeImage: { width: 20, height: 20 },
   initialsText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
+  cardTitle: {
+  fontSize: 16,
+  fontWeight: 'bold',
+  marginBottom: 10,
+  color: '#333',
+},
+
+eventRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 15,
+},
+
+eventIcon: {
+  fontSize: 22,
+  marginRight: 10,
+},
+
+eventTitle: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#000',
+},
+
+eventSubtitle: {
+  fontSize: 12,
+  color: '#555',
+},
+
+eventDate: {
+  fontSize: 11,
+  color: '#888',
+  marginTop: 2,
+},
+
+actionText: {
+  fontSize: 13,
+  color: '#23B480',
+  fontWeight: '600',
+},
 });
 
 export default DashboardScreen;

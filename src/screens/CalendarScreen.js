@@ -35,6 +35,65 @@ const CalendarScreen = () => {
   const [markedDates, setMarkedDates] = useState({});
 
   const navigation = useNavigation();
+  // CalendarScreen ke andar top par add karein
+const [attendanceData, setAttendanceData] = useState([]);
+
+useEffect(() => {
+  fetchAttendance(); // Attendance fetch karne ke liye
+}, [currentMonth, currentYear]);
+
+const fetchAttendance = async () => {
+  try {
+    const empId = await AsyncStorage.getItem('empId');
+    const orgId = "67a3412da38daae94d9861d2";
+
+    const {start, end} = getMonthStartEnd(currentYear, currentMonth);
+
+    const url = `/attendance/getAttendanceByDateRange/${empId}?startDate=${start}&endDate=${end}&organizationId=${orgId}`;
+
+    const resp = await apiClient.get(url);
+
+    if (resp?.data?.data) {
+      const {attendanceRecords, weekOffDates} = resp.data.data;
+
+      // ✅ Attendance Records map
+      const attendanceFormatted = attendanceRecords.map(item => {
+  const d = new Date(item.date);
+
+  return {
+    date: d.getDate(),
+    fullDate: item.date,
+    title: item.status, // Present / Absent
+    type: 'Attendance', // ✅ IMPORTANT
+    checkIn: item.checkIn,
+    checkOut: item.checkOut,
+    totalHours: item.totalHoursWorked,
+    remarks: item.remarks,
+    day: d.toLocaleString('en-US', {weekday: 'short'}),
+  };
+});
+
+      // ✅ WeekOff ko alag se map karo
+      const weekOffFormatted = weekOffDates.map(dateStr => {
+  const d = new Date(dateStr);
+
+  return {
+    date: d.getDate(),
+    fullDate: dateStr,
+    title: 'Week Off',
+    type: 'Attendance', // ✅ same filter me aayega
+    isWeekOff: true,
+    day: d.toLocaleString('en-US', {weekday: 'short'}),
+  };
+});
+
+      // ✅ Dono merge karo
+      setAttendanceData([...attendanceFormatted, ...weekOffFormatted]);
+    }
+  } catch (err) {
+    console.log('❌ Attendance API Error:', err);
+  }
+};
 
   const months = [
     'January',
@@ -74,34 +133,69 @@ const CalendarScreen = () => {
     setStartDay(getFirstDayOfMonth(currentMonth, currentYear));
   }, [currentMonth, currentYear]);
 
-  useEffect(() => {
-    fetchHolidays();
-    fetchEvent();
-    fetchMetting();
-  }, [currentMonth, currentYear]);
+ useEffect(() => {
+  fetchHolidays();
+  fetchEvent();
+  fetchMetting();
+  fetchAttendance(); // <-- Ye line add karein
+}, [currentMonth, currentYear]);
 
-  useEffect(() => {
-    const markDates = () => {
-      const newMarked = {};
+  // useEffect(() => {
+  //   const markDates = () => {
+  //     const newMarked = {};
 
-      const addToMarked = (arr, colorKey) => {
-        arr.forEach(item => {
-          const dateKey = `${currentYear}-${currentMonth + 1}-${item.date}`;
-          if (!newMarked[dateKey]) newMarked[dateKey] = new Set();
-          newMarked[dateKey].add(colorKey);
-        });
-      };
+  //     const addToMarked = (arr, colorKey) => {
+  //       arr.forEach(item => {
+  //         const dateKey = `${currentYear}-${currentMonth + 1}-${item.date}`;
+  //         if (!newMarked[dateKey]) newMarked[dateKey] = new Set();
+  //         newMarked[dateKey].add(colorKey);
+  //       });
+  //     };
 
-      addToMarked(mettingData, 'green');
-      addToMarked(eventData, 'blue');
-      addToMarked(holidayData, 'red');
+  //     addToMarked(mettingData, 'green');
+  //     addToMarked(eventData, 'blue');
+  //     addToMarked(holidayData, 'red');
 
-      setMarkedDates(newMarked);
+  //     setMarkedDates(newMarked);
+  //   };
+
+  //   markDates();
+  // }, [mettingData, eventData, holidayData, currentMonth, currentYear]);
+useEffect(() => {
+  const markDates = () => {
+    const newMarked = {};
+
+    const addToMarked = (arr, colorKey) => {
+      arr.forEach(item => {
+
+        let dateKey;
+
+        // ✅ Attendance (fullDate wala)
+        if (item.fullDate) {
+          dateKey = item.fullDate.split('T')[0];
+        } 
+        // ✅ Meeting/Event/Holiday (date number wala)
+        else {
+          dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(item.date).padStart(2, '0')}`;
+        }
+
+        if (!newMarked[dateKey]) newMarked[dateKey] = new Set();
+        newMarked[dateKey].add(colorKey);
+      });
     };
 
-    markDates();
-  }, [mettingData, eventData, holidayData, currentMonth, currentYear]);
+    addToMarked(mettingData, 'blue');
+    addToMarked(eventData, 'green');
+    addToMarked(holidayData, 'red');
 
+    // ✅ WeekOff
+    addToMarked(attendanceData.filter(a => a.isWeekOff), 'grey');
+
+    setMarkedDates(newMarked);
+  };
+
+  markDates();
+}, [mettingData, eventData, holidayData, attendanceData, currentMonth, currentYear]);
   const fetchHolidays = async () => {
     try {
       const {start, end} = getMonthStartEnd(currentYear, currentMonth);
@@ -189,15 +283,26 @@ const CalendarScreen = () => {
     }
   };
 
-  const allData = [
-    ...mettingData,
-    ...eventData,
-    ...holidayData,
-    ...birthdayData,
-  ];
-  const filtered = selectedFilter
-    ? allData.filter(item => item.type === selectedFilter)
-    : allData;
+ const allData = [
+  ...mettingData,
+  ...eventData,
+  ...holidayData,
+  ...attendanceData, // <-- Attendance data merge kiya
+];
+
+  // Is logic se click ki gayi date ka data niche show hoga
+const selectedDateFull = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(selectedDate).padStart(2, '0')}`;
+
+const dayWiseData = allData.filter(item => item.date === selectedDate); // Sirf select ki gayi date ka data
+
+// Filter buttons ke liye logic
+const filtered = selectedFilter 
+  ? dayWiseData.filter(item => item.type === selectedFilter)
+  : dayWiseData;
+
+  // const filtered = selectedFilter
+  //   ? allData.filter(item => item.type === selectedFilter)
+  //   : allData;
 
   const handleBackPress = () => {
     try {
@@ -209,44 +314,114 @@ const CalendarScreen = () => {
     }
   };
 
-  const renderDay = day => {
-    const isSelected = day === selectedDate;
-    const dateKey = `${currentYear}-${currentMonth + 1}-${day}`;
-    const types = markedDates[dateKey] || new Set();
+ const renderDay = (day) => {
+  const isSelected = day === selectedDate;
+  
+  // Date format match karne ke liye string banayein (YYYY-MM-DD)
+  // Month + 1 kyunki JavaScript months 0 se start hote hain
+  const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  
+  // Check karein ki ye date aapke array mein hai ya nahi
+//  const isWeekOff = attendanceData.some(item => {
+//   const d = item.fullDate?.split('T')[0];
+//   return d === dateString && item.isWeekOff;
+// });
 
-    return (
-      <TouchableOpacity
-        key={day}
-        style={[styles.dayContainer, isSelected && styles.selectedDay]}
-        onPress={() => setSelectedDate(day)}>
-        <Text style={[styles.dayText, isSelected && styles.selectedDayText]}>
-          {day}
-        </Text>
-        <View style={styles.indicatorContainer}>
-          {Array.from(types).map((color, index) => (
-            <View key={index} style={[styles.dot, {backgroundColor: color}]} />
-          ))}
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  // const dateKey = `${currentYear}-${currentMonth + 1}-${day}`;
+  // const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  // const types = markedDates[dateKey] || new Set();
 
-  const renderItem = ({item, index}) => {
-    const bg = ['#EAD4D3', '#F3D3D2', '#D4BFBF', '#DBADAC'][index % 4];
-    return (
-      <View style={[styles.scheduleItem, {backgroundColor: bg}]}>
-        <View style={styles.dateBox}>
-          <Text style={styles.dateText}>{item.date}</Text>
-          <Text style={styles.dayText}>{item.day}</Text>
-        </View>
-        <View style={styles.scheduleDetails}>
-          <Text style={styles.scheduleTitle}>{item.title}</Text>
-          <Text style={styles.scheduleType}>{item.type}</Text>
-          <Text style={styles.scheduleTime}>{item.time}</Text>
-        </View>
+  const dateKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const isWeekOff = markedDates[dateKey]?.has('grey');
+const types = markedDates[dateKey] || new Set();
+
+  return (
+    <TouchableOpacity
+      key={day}
+      style={[
+        styles.dayContainer,
+        isSelected && styles.selectedDay,
+        // Agar Week Off hai toh Grey background
+        isWeekOff && !isSelected && { backgroundColor: '#D3D3D3', borderRadius: 8 } 
+      ]}
+      onPress={() => setSelectedDate(day)}
+    >
+      <Text style={[
+        styles.dayText, 
+        isSelected && styles.selectedDayText,
+        isWeekOff && { color: '#555', fontWeight: 'bold' } // Week off text style
+      ]}>
+        {day}
+      </Text>
+      
+      <View style={styles.indicatorContainer}>
+        {Array.from(types).map((color, index) => (
+          <View key={index} style={[styles.dot, { backgroundColor: color }]} />
+        ))}
       </View>
-    );
-  };
+    </TouchableOpacity>
+  );
+};
+  const formatTime = (time) => {
+  if (!time) return '--';
+  return new Date(time).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const renderItem = ({item, index}) => {
+  const bg = ['#EAD4D3', '#F3D3D2', '#D4BFBF', '#DBADAC'][index % 4];
+
+  return (
+    <View style={[styles.scheduleItem, {backgroundColor: bg}]}>
+      
+      {/* LEFT DATE BOX (same for all) */}
+      <View style={styles.dateBox}>
+        <Text style={styles.dateText}>{item.date}</Text>
+        <Text style={styles.dayText}>{item.day}</Text>
+      </View>
+
+      {/* RIGHT CONTENT */}
+      <View style={styles.scheduleDetails}>
+        
+        {/* TITLE */}
+        <Text style={styles.scheduleTitle}>{item.title}</Text>
+
+        {/* 👉 Attendance UI */}
+        {item.type === 'Attendance' ? (
+          <>
+            {item.isWeekOff ? (
+              <Text style={styles.scheduleType}>Week Off</Text>
+            ) : (
+              <>
+                <Text style={styles.scheduleType}>
+                  Check-in / Check-out: {formatTime(item.checkIn)} - {formatTime(item.checkOut)}
+                </Text>
+
+                <Text style={styles.scheduleTime}>
+                  ⏳ {item.totalHours ? item.totalHours + ' hrs' : '--'}
+                </Text>
+
+                <Text style={styles.scheduleTime}>
+                  Remarks: {item.remarks || '--'}
+                </Text>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {/* 👉 OLD UI (Meeting / Event / Holiday SAME rahega) */}
+            <Text style={styles.scheduleType}>{item.type}</Text>
+            <Text style={styles.scheduleTime}>{item.time}</Text>
+          </>
+        )}
+
+      </View>
+    </View>
+  );
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -329,7 +504,7 @@ const CalendarScreen = () => {
       <View style={styles.scheduleContainer}>
         <Text style={styles.sectionTitle}>Schedule</Text>
         <View style={styles.filterContainer}>
-          {['Meeting', 'Event', 'Holiday', 'Birthday'].map(f => (
+          {['Meeting', 'Event', 'Holiday', 'Attendance'].map(f => (
             <TouchableOpacity
               key={f}
               style={[
