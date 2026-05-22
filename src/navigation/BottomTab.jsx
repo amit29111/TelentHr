@@ -1,10 +1,10 @@
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
-// import Ionicons from 'react-native-vector-icons/Ionicons';
-import { StyleSheet, Text, Image, View, Alert } from 'react-native';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {createStackNavigator} from '@react-navigation/stack';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import {StyleSheet, Text, Image, View, Alert} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import DashboardScreen from '../screens/DashboardScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 // import MyTeamScreen from '../screens/MyTeamScreen';
@@ -26,9 +26,14 @@ import LeaveScreen from '../screens/LeaveScreen';
 import ApplyLeaveScreen from '../screens/ApplyLeaveScreen';
 import leaveRequestView from '../screens/leaveRequestView';
 import JobDetais from '../screens/JobDetais';
+import PayrollScreen from '../screens/PayrollScreen'; // Import the new screen
 // import CalendarScreen from '../screens/CalendarScreen';
-import { useDispatch } from 'react-redux';
-import { logout } from '../redux/slice';
+import {useDispatch} from 'react-redux';
+import {logout} from '../redux/slice';
+import PayrollSalary from '../screens/PayrollSalary';
+import PayrollTaxation from '../screens/PayrollTaxation';
+import PayrollClaims from '../screens/PayrollClaims';
+import PayrollRequests from '../screens/PayrollRequests';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -40,109 +45,108 @@ const AppStack = () => {
       <Stack.Screen
         name="DashboardScreen"
         component={DashboardScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="CalendarScreen"
         component={CalendarScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
-      
+
       <Stack.Screen
         name="ProfileScreen"
         component={ProfileScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="PersonalInfoScreen"
         component={PersonalInfoScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="JobDetialScreen"
         component={JobDetialScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="DocumentsScreen"
         component={DocumentsScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="FolderDetailScreen"
         component={FolderDetailScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="LeaveScreen"
         component={LeaveScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="ApplyLeaveScreen"
         component={ApplyLeaveScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="leaveRequestView"
         component={leaveRequestView}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="MyPayRollScreen"
         component={MyPayRollScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
-      
+
       <Stack.Screen
         name="AttendanceScreen"
         component={AttendanceScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="AnnouncementScreen"
         component={AnnouncementScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="RaiseConcernScreen"
         component={RaiseConcernScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="ReportScreen"
         component={ReportScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="LearningDevelopmentScreen"
         component={LearningDevelopmentScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="TaskManagementScreen"
         component={TaskManagementScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
 
       <Stack.Screen
         name="PerfomanceScreen"
         component={PerfomanceScreen}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
-       <Stack.Screen
+      <Stack.Screen
         name="JobDetais"
         component={JobDetais}
-        options={{ headerShown: false }}
+        options={{headerShown: false}}
       />
-
     </Stack.Navigator>
   );
 };
@@ -163,41 +167,52 @@ const BottomTab = () => {
   };
 
   const confirmLogout = () => {
-   Alert.alert(
-          'Logout',
-          'Are you sure you want to logout?',
-          [
-            {text: 'Cancel', style: 'cancel'},
-            {
-              text: 'Logout',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await AsyncStorage.removeItem('empId');
-                  navigation.reset({
-                    index: 0,
-                    routes: [{name: 'LoginScreen'}],
-                  });
-                } catch (e) {
-                  console.error('❌ Error during logout:', e);
-                  Alert.alert('Error', 'Failed to logout. Please try again.');
-                }
-              },
-            },
-          ],
-          {cancelable: true},
-        );
-};
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('empId');
+              navigation.reset({
+                index: 0,
+                routes: [{name: 'LoginScreen'}],
+              });
+            } catch (e) {
+              console.error('❌ Error during logout:', e);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          },
+        },
+      ],
+      {cancelable: true},
+    );
+  };
 
   return (
     <Tab.Navigator
       initialRouteName="Dashboard"
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
+      screenOptions={({route}) => ({
+        tabBarIcon: ({focused, color, size}) => {
           if (route.name === 'Calendar') {
             return (
               <Image
                 source={require('../assets/bottamIcon/calendar.png')}
+                style={{
+                  width: 29,
+                  height: 26,
+                  tintColor: focused ? '#541212' : '#666',
+                }}
+              />
+            );
+          } else if (route.name === 'Payroll') {
+            return (
+              <Image
+                source={require('../assets/payrollBottom.png')}
                 style={{
                   width: 29,
                   height: 26,
@@ -220,7 +235,7 @@ const BottomTab = () => {
                   justifyContent: 'center',
                   elevation: 8,
                   shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
+                  shadowOffset: {width: 0, height: 2},
                   shadowOpacity: focused ? 0.3 : 0.1,
                   shadowRadius: 4,
                 }}
@@ -270,41 +285,90 @@ const BottomTab = () => {
           }
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarLabel: ({ focused }) => {
+        tabBarLabel: ({focused}) => {
           if (route.name === 'Dashboard') {
             return null;
           }
           return (
-            <Text style={[styles.navText, { color: focused ? '#8D777D' : '#666' }]}>
+            <Text
+              style={[styles.navText, {color: focused ? '#8D777D' : '#666'}]}>
               {route.name === 'Logout' ? 'Logout' : route.name}
             </Text>
           );
         },
         tabBarStyle: styles.bottomNav,
-        tabBarItemStyle: ({ focused }) => [
+        tabBarItemStyle: ({focused}) => [
           styles.navItem,
           focused && styles.activeNav,
         ],
         tabBarActiveTintColor: '#8D777D',
         tabBarInactiveTintColor: '#666',
         headerShown: false,
-      })}
-    >
+      })}>
       <Tab.Screen name="Calendar" component={CalendarScreen} />
-      {/* <Tab.Screen name="WorkSpace" component={WorkSpace} /> */}
+      <Tab.Screen
+        name="Payroll"
+        component={PayrollStack}
+        options={{
+          unmountOnBlur: true,
+        }}
+      />
       <Tab.Screen name="Dashboard" component={AppStack} />
       {/* <Tab.Screen name="My Team" component={MyTeamScreen} /> */}
+      <Tab.Screen
+        name="Empty"
+        component={View}
+        options={{
+          tabBarButton: () => <View style={{width: 50}} />,
+        }}
+      />
       <Tab.Screen
         name="Logout"
         component={View}
         listeners={{
-          tabPress: (e) => {
+          tabPress: e => {
             e.preventDefault();
-            confirmLogout();;
+            confirmLogout();
           },
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+const PayrollStack = () => {
+  return (
+    <Stack.Navigator initialRouteName="PayrollDashboard">
+      <Stack.Screen
+        name="PayrollDashboard"
+        component={PayrollScreen}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="PayrollSalary"
+        component={PayrollSalary}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="PayrollTaxation"
+        component={PayrollTaxation}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="PayrollClaims"
+        component={PayrollClaims}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="PayrollRequests"
+        component={PayrollRequests}
+        options={{headerShown: false}}
+      />
+    </Stack.Navigator>
   );
 };
 
@@ -334,5 +398,3 @@ const styles = StyleSheet.create({
 });
 
 export default BottomTab;
-
-
