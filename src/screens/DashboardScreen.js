@@ -16,7 +16,7 @@ import {useDispatch, useSelector} from 'react-redux';
 import {
   fetchEmployeeById,
   fetchEmployeeNotification,
-  fetchEmployeeHighlights
+  fetchEmployeeHighlights,
 } from '../redux/employeeSlice';
 import {fetchByOrg} from '../redux/slice';
 import {Modal} from 'react-native';
@@ -31,13 +31,9 @@ const DashboardScreen = ({navigation}) => {
   const employee = useSelector(state => state?.employee?.employeeData);
   const notifications = useSelector(state => state?.employee?.notificationData);
   const orgDetails = useSelector(state => state.auth.employeeData);
- const highlightsData = useSelector(
-  state => state.employee.highlightsData
-);
+  const highlightsData = useSelector(state => state.employee.highlightsData);
 
-const loading = useSelector(
-  state => state.employee.loading
-);
+  const loading = useSelector(state => state.employee.loading);
 
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -64,13 +60,10 @@ const loading = useSelector(
     fetchData();
   }, [dispatch]);
 
-  useEffect(() => {
-  console.log("appppppppp Highlights Data:", highlightsData);
-}, [highlightsData]);
 
-const filteredHighlights = highlightsData?.filter(
-  item => item.type === 'birthday' || item.type === 'work_anniversary'
-);
+  const filteredHighlights = highlightsData?.filter(
+    item => item.type === 'birthday' || item.type === 'work_anniversary',
+  );
 
   useEffect(() => {
     if (employee) setAllRecord(employee);
@@ -85,12 +78,11 @@ const filteredHighlights = highlightsData?.filter(
 
   // ✅ Only Attendance & Leave
   const featureCards = [
-
-     {
-       title: 'My Payroll',
-       image: require('../../src/assets/mypayroll.png'),
-       backgroundColor: '#FDE3BF',
-     },
+    {
+      title: 'My Payroll',
+      image: require('../../src/assets/mypayroll.png'),
+      backgroundColor: '#FDE3BF',
+    },
     {
       title: 'Attendance',
       image: require('../../src/assets/attendence.png'),
@@ -101,21 +93,21 @@ const filteredHighlights = highlightsData?.filter(
       image: require('../../src/assets/leave.png'),
       backgroundColor: '#FF415554',
     },
-     {
-       title: 'Announcements',
-       image: require('../../src/assets/announcement.png'),
-       backgroundColor: '#84272754',
-     },
-     {
-       title: 'Raise Concern',
-       image: require('../../src/assets/raiseconcern.png'),
-       backgroundColor: '#EA5E9C54',
-     },
-     {
-       title: 'Reports',
-       image: require('../../src/assets/reports.png'),
-       backgroundColor: '#9CD06954',
-     },
+    {
+      title: 'Announcements',
+      image: require('../../src/assets/announcement.png'),
+      backgroundColor: '#84272754',
+    },
+    {
+      title: 'Raise Concern',
+      image: require('../../src/assets/raiseconcern.png'),
+      backgroundColor: '#EA5E9C54',
+    },
+    {
+      title: 'Reports',
+      image: require('../../src/assets/reports.png'),
+      backgroundColor: '#9CD06954',
+    },
   ];
 
   const overviewCards = [
@@ -203,11 +195,11 @@ const filteredHighlights = highlightsData?.filter(
 
         <View style={styles.headerRight}>
           <TouchableOpacity onPress={() => setShowNotifications(true)}>
-           <Image
-  source={require('../assets/victorIconImage/bell.png')}
-  style={styles.eyeImage}
-  resizeMode="contain"
-/>
+            <Image
+              source={require('../assets/victorIconImage/bell.png')}
+              style={styles.eyeImage}
+              resizeMode="contain"
+            />
             {getNotifications.length > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.badgeText}>{getNotifications.length}</Text>
@@ -227,16 +219,17 @@ const filteredHighlights = highlightsData?.filter(
             <Pressable
               style={styles.modalBackground}
               onPress={handleOutsidePress}>
-              <Pressable style={styles.notificationPanel} 
-              onPress={(e) => e.stopPropagation()}>
+              <Pressable
+                style={styles.notificationPanel}
+                onPress={e => e.stopPropagation()}>
                 <View style={styles.panelHeader}>
                   <Text style={styles.panelTitle}>Notifications</Text>
                   <TouchableOpacity onPress={handleOutsidePress}>
                     <Image
-  source={require('../assets/victorIconImage/bell.png')}
-  style={styles.eyeImage}
-  resizeMode="contain"
-/>
+                      source={require('../assets/victorIconImage/bell.png')}
+                      style={styles.eyeImage}
+                      resizeMode="contain"
+                    />
                   </TouchableOpacity>
                 </View>
                 {getNotifications.length > 0 ? (
@@ -292,42 +285,35 @@ const filteredHighlights = highlightsData?.filter(
       </View> */}
 
       <View style={styles.birthdaySection}>
-  <View style={styles.birthdayCard}>
-    <Text style={styles.cardTitle}>Birthdays & Work Anniversaries</Text>
+        <View style={styles.birthdayCard}>
+          <Text style={styles.cardTitle}>Birthdays & Work Anniversaries</Text>
 
-    {filteredHighlights?.map((item, index) => (
-      <View key={index} style={styles.eventRow}>
-        
-        {/* LEFT ICON */}
-        <Text style={styles.eventIcon}>
-          {item.type === 'birthday' ? '🎉' : '🏆'}
-        </Text>
+          {filteredHighlights?.map((item, index) => (
+            <View key={index} style={styles.eventRow}>
+              {/* LEFT ICON */}
+              <Text style={styles.eventIcon}>
+                {item.type === 'birthday' ? '🎉' : '🏆'}
+              </Text>
 
-        {/* CENTER CONTENT */}
-        <View style={{flex: 1}}>
-          <Text style={styles.eventTitle}>
-            {item.title}
-          </Text>
-          <Text style={styles.eventSubtitle}>
-            {item.details}
-          </Text>
-          <Text style={styles.eventDate}>
-            {new Date(item.date).toDateString()}
-          </Text>
+              {/* CENTER CONTENT */}
+              <View style={{flex: 1}}>
+                <Text style={styles.eventTitle}>{item.title}</Text>
+                <Text style={styles.eventSubtitle}>{item.details}</Text>
+                <Text style={styles.eventDate}>
+                  {new Date(item.date).toDateString()}
+                </Text>
+              </View>
+
+              {/* RIGHT BUTTON */}
+              <TouchableOpacity>
+                <Text style={styles.actionText}>
+                  {item.type === 'birthday' ? 'Send Wishes' : 'Congratulate'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
         </View>
-
-        {/* RIGHT BUTTON */}
-        <TouchableOpacity>
-          <Text style={styles.actionText}>
-            {item.type === 'birthday' ? 'Send Wishes' : 'Congratulate'}
-          </Text>
-        </TouchableOpacity>
-
       </View>
-    ))}
-  </View>
-</View>
-
 
       {/* Content */}
       <ScrollView
@@ -375,7 +361,7 @@ const filteredHighlights = highlightsData?.filter(
         {/* Features */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Manage Work & Benefits in One Place   
+            Manage Work & Benefits in One Place
           </Text>
           {chunkedFeatureCards.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.featureRow}>
@@ -388,13 +374,12 @@ const filteredHighlights = highlightsData?.filter(
                   ]}
                   onPress={() => {
                     const screenMap = {
-                      'My Payroll'   : 'MyPayRollScreen',
+                      'My Payroll': 'MyPayRollScreen',
                       Attendance: 'AttendanceScreen',
                       Leave: 'LeaveScreen',
                       'Raise Concern': 'RaiseConcernScreen',
-                      Announcements : 'AnnouncementScreen',
-                      Reports      : 'ReportScreen',
-                     
+                      Announcements: 'AnnouncementScreen',
+                      Reports: 'ReportScreen',
                     };
                     const screen = screenMap[card.title];
                     if (screen) navigation.navigate(screen);
@@ -532,7 +517,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  sectionTitle: {fontSize: 14, fontWeight: 'bold', color: '#000', marginTop: 20},
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
+    marginTop: 20,
+  },
   overviewScroll: {flexDirection: 'row'},
   overviewCard: {
     borderRadius: 10,
@@ -568,19 +558,19 @@ const styles = StyleSheet.create({
   //   marginBottom: 12,
   // },
   featureRow: {
-  flexDirection: 'row',
-  justifyContent: 'center', // ✅ दोनों cards ek sath chipke rahenge
-  marginVertical: 12,
-},
+    flexDirection: 'row',
+    justifyContent: 'center', // ✅ दोनों cards ek sath chipke rahenge
+    marginVertical: 12,
+  },
 
-featureCard: {
-  width: width * 0.29,
-  borderRadius: 12,
-  padding: 12,
-  alignItems: 'center',
-  marginHorizontal: 8,   // ✅ equal gap dono side
-  marginBottom: 12,
-},
+  featureCard: {
+    width: width * 0.29,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    marginHorizontal: 8, // ✅ equal gap dono side
+    marginBottom: 12,
+  },
 
   featureImage: {
     width: width * 0.1,
@@ -664,52 +654,49 @@ featureCard: {
     backgroundColor: '#4CAF50',
   },
 
-  eyeIcon: { position: 'absolute', right: 15 },
-  eyeImage: { width: 20, height: 20 },
+  eyeIcon: {position: 'absolute', right: 15},
+  eyeImage: {width: 20, height: 20},
   initialsText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
   cardTitle: {
-  fontSize: 16,
-  fontWeight: 'bold',
-  marginBottom: 10,
-  color: '#333',
-},
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
 
-eventRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 15,
-},
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
 
-eventIcon: {
-  fontSize: 22,
-  marginRight: 10,
-},
+  eventIcon: {
+    fontSize: 22,
+    marginRight: 10,
+  },
 
-eventTitle: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: '#000',
-},
+  eventTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+  },
 
-eventSubtitle: {
-  fontSize: 12,
-  color: '#555',
-},
+  eventSubtitle: {
+    fontSize: 12,
+    color: '#555',
+  },
 
-eventDate: {
-  fontSize: 11,
-  color: '#888',
-  marginTop: 2,
-},
+  eventDate: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
 
-actionText: {
-  fontSize: 13,
-  color: '#23B480',
-  fontWeight: '600',
-},
+  actionText: {
+    fontSize: 13,
+    color: '#23B480',
+    fontWeight: '600',
+  },
 });
 
 export default DashboardScreen;
-
-
-
