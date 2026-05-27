@@ -34,6 +34,8 @@ import PayrollSalary from '../screens/PayrollSalary';
 import PayrollTaxation from '../screens/PayrollTaxation';
 import PayrollClaims from '../screens/PayrollClaims';
 import PayrollRequests from '../screens/PayrollRequests';
+import DeclareInvestments from '../screens/DeclareInvestments';
+import ProofOfInvestments from '../screens/ProofOfInvestments';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -366,6 +368,18 @@ const PayrollStack = () => {
       <Stack.Screen
         name="PayrollRequests"
         component={PayrollRequests}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="DeclareInvestments"
+        component={DeclareInvestments}
+        options={{headerShown: false}}
+      />
+
+      <Stack.Screen
+        name="ProofOfInvestments"
+        component={ProofOfInvestments}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

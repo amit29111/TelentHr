@@ -44,6 +44,12 @@ export const ENDPOINT = {
     GET_CONCERNS: (empId) =>
       `resignation/getAllPreResignations?employeeId=${empId}`,
   },
+  PAYROLL: {
+    MY_CLAIMS_SUMMARY: 'payRoll/employee/myClaimsSummary',
+    MY_CLAIMS: 'payRoll/employee/myClaims',
+    REIMBURSEMENT_HEADS: 'payRoll/employee/reimbursementHeads',
+    SUBMIT_CLAIM: 'payRoll/employee/submitClaim',
+  },
 };
 
   

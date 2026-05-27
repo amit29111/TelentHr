@@ -155,6 +155,37 @@ const apiService = {
     throw handleError(error);
   }
 },
+  async getMyClaimsSummary() {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.MY_CLAIMS_SUMMARY,
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getReimbursementHeads() {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.REIMBURSEMENT_HEADS,
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async submitClaim(payload) {
+    try {
+      const response = await apiClient.post(
+        ENDPOINT.PAYROLL.SUBMIT_CLAIM,
+        payload,
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
 
 };
 
