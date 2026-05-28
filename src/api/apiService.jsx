@@ -186,6 +186,87 @@ const apiService = {
       throw handleError(error);
     }
   },
+  async getMyPayslips(financialYear) {
+    console.log('financialYear', financialYear);
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.MY_PAYSLIPS(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getAnnualSalaryStatement(financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.ANNUAL_SALARY_STATEMENT(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async startVpfRequest(payload) {
+    try {
+      const response = await apiClient.post(ENDPOINT.PAYROLL.VPF_START, payload);
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getMyVpfConfig() {
+    try {
+      const response = await apiClient.get(ENDPOINT.PAYROLL.EMPLOYEE_VPF);
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getAllVpfRequests() {
+    try {
+      const response = await apiClient.get(ENDPOINT.PAYROLL.VPF_ALL);
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async approveVpfRequest(requestId) {
+    try {
+      const response = await apiClient.post(ENDPOINT.PAYROLL.VPF_APPROVE(requestId));
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getPayrollDashboard() {
+    try {
+      const response = await apiClient.get(ENDPOINT.PAYROLL.DASHBOARD);
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async downloadForm16PartA(financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.FORM16_PART_A(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async downloadForm16PartB(financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.FORM16_PART_B(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
 
 };
 

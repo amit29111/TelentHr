@@ -49,6 +49,20 @@ export const ENDPOINT = {
     MY_CLAIMS: 'payRoll/employee/myClaims',
     REIMBURSEMENT_HEADS: 'payRoll/employee/reimbursementHeads',
     SUBMIT_CLAIM: 'payRoll/employee/submitClaim',
+    MY_PAYSLIPS: year => `payRoll/employee/myPayslips?year=${year}`,
+    ANNUAL_SALARY_STATEMENT: financialYear =>
+      `payRoll/employee/annualSalaryStatement?financialYear=${financialYear}`,
+    SALARY_PDF_DOWNLOAD: payslipId =>
+      `payroll/employee/getMySalaryPdfdownload/${payslipId}`,
+    DASHBOARD: 'payroll/employee/dashboard',
+    FORM16_PART_A: financialYear =>
+      `payRoll/employee/form16/part-a/download?financialYear=${financialYear}`,
+    FORM16_PART_B: financialYear =>
+      `payRoll/employee/form16/part-b/download?financialYear=${financialYear}`,
+    VPF_START: 'payRoll/employee/vpf/start',
+    VPF_APPROVE: requestId => `payroll/employee/vpf/${requestId}/approve`,
+    VPF_ALL: 'payroll/vpf/all',
+    EMPLOYEE_VPF: 'payroll/employee/vpf',
   },
 };
 
