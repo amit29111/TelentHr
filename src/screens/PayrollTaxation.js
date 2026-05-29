@@ -8,16 +8,15 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Share,
-  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import RNFS from 'react-native-fs';
+import DownloadIconButton from '../components/DownloadIconButton';
 import Feather from 'react-native-vector-icons/Feather';
 
 import PayrollTabs from './PayrollTabs';
 import apiService from '../api/apiService';
 import {ENDPOINT} from '../api/endpoint';
+import {downloadAuthenticatedFile} from '../utils/payrollDownload';
 import {
   toApiFinancialYear,
   toShortFinancialYear,
@@ -27,8 +26,6 @@ import {
   declarationHasContent,
   fetchTdsDeclaration,
 } from './DeclareInvestments';
-
-const BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
 
 const extractTaxReport = payload => payload?.data || payload;
 const extractForm16 = payload => payload?.data || payload;
@@ -51,55 +48,17 @@ const formatGeneratedOn = value => {
   });
 };
 
-const downloadTaxReportFile = async financialYear => {
-  const authToken = await AsyncStorage.getItem('authToken');
-  const orgId = await AsyncStorage.getItem('orgId');
-  if (!authToken) throw new Error('Please login again.');
+const downloadTaxReportFile = async financialYear =>
+  downloadAuthenticatedFile({
+    url: ENDPOINT.PAYROLL.TDS_TAX_REPORT_DOWNLOAD(financialYear),
+    fileName: `tax_report_${financialYear}_${Date.now()}.pdf`,
+  });
 
-  const fileName = `tax_report_${financialYear}_${Date.now()}.pdf`;
-  const destPath =
-    Platform.OS === 'ios'
-      ? `${RNFS.DocumentDirectoryPath}/${fileName}`
-      : `${RNFS.DownloadDirectoryPath}/${fileName}`;
-
-  const result = await RNFS.downloadFile({
-    fromUrl: `${BASE_URL}${ENDPOINT.PAYROLL.TDS_TAX_REPORT_DOWNLOAD(financialYear)}`,
-    toFile: destPath,
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      ...(orgId ? {org_uuid: orgId} : {}),
-    },
-  }).promise;
-
-  if (result.statusCode !== 200) throw new Error('Download failed.');
-  const fileUrl = Platform.OS === 'android' ? `file://${destPath}` : destPath;
-  await Share.share({url: fileUrl, title: 'Tax Report'});
-};
-
-const downloadForm16File = async financialYear => {
-  const authToken = await AsyncStorage.getItem('authToken');
-  const orgId = await AsyncStorage.getItem('orgId');
-  if (!authToken) throw new Error('Please login again.');
-
-  const fileName = `form16_${financialYear}_${Date.now()}.pdf`;
-  const destPath =
-    Platform.OS === 'ios'
-      ? `${RNFS.DocumentDirectoryPath}/${fileName}`
-      : `${RNFS.DownloadDirectoryPath}/${fileName}`;
-
-  const result = await RNFS.downloadFile({
-    fromUrl: `${BASE_URL}${ENDPOINT.PAYROLL.FORM16_DOWNLOAD(financialYear)}`,
-    toFile: destPath,
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      ...(orgId ? {org_uuid: orgId} : {}),
-    },
-  }).promise;
-
-  if (result.statusCode !== 200) throw new Error('Download failed.');
-  const fileUrl = Platform.OS === 'android' ? `file://${destPath}` : destPath;
-  await Share.share({url: fileUrl, title: 'Form 16'});
-};
+const downloadForm16File = async financialYear =>
+  downloadAuthenticatedFile({
+    url: ENDPOINT.PAYROLL.FORM16_DOWNLOAD(financialYear),
+    fileName: `form16_${financialYear}_${Date.now()}.pdf`,
+  });
 
 const taxationTabs = [
   'Investment Declaration',
@@ -456,16 +415,13 @@ const PayrollTaxation = ({navigation}) => {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.downloadBtn}
+            <DownloadIconButton
+              backgroundColor="#23B480"
+              size={44}
+              iconSize={22}
+              loading={downloadingTaxReport}
               onPress={handleTaxReportDownload}
-              disabled={downloadingTaxReport}>
-              {downloadingTaxReport ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Feather name="download" size={20} color="#fff" />
-              )}
-            </TouchableOpacity>
+            />
           </View>
 
           {taxReport.summary ? (
@@ -588,16 +544,13 @@ const PayrollTaxation = ({navigation}) => {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={styles.downloadBtn}
+            <DownloadIconButton
+              backgroundColor="#23B480"
+              size={44}
+              iconSize={22}
+              loading={downloadingForm16}
               onPress={handleForm16Download}
-              disabled={downloadingForm16}>
-              {downloadingForm16 ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Feather name="download" size={20} color="#fff" />
-              )}
-            </TouchableOpacity>
+            />
           </View>
 
           <View style={styles.taxSummaryBox}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,10 @@ import {
   Image,
   Pressable,
   Modal,
-  Dimensions
+  Dimensions,
 } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {useDispatch, useSelector} from 'react-redux';
 import TextTicker from 'react-native-text-ticker';
 import {
   fetchEmployeeById,
@@ -18,32 +19,33 @@ import {
   fetchEmployeeHighlights,
 } from '../redux/employeeSlice';
 import {fetchByOrg} from '../redux/slice';
-// import {Modal} from 'react-native';
-
 
 import PayrollDashboard from './PayrollDashboard';
 
-const { width } = Dimensions.get('window');
+const {width} = Dimensions.get('window');
 
 const PayrollScreen = ({navigation}) => {
-  // Get allRecord from Redux (like Dashboard)
-  // const allRecord = useSelector(state => state.auth?.allRecord);
   const [allRecord, setAllRecord] = useState(null);
-  console.log('PayrollScreen - allRecord from Redux:', allRecord);
   const [getNotifications, setGetNotifications] = useState([]);
   const dispatch = useDispatch();
 
   const employee = useSelector(state => state?.employee?.employeeData);
   const notifications = useSelector(state => state?.employee?.notificationData);
   const orgDetails = useSelector(state => state.auth.employeeData);
-  const highlightsData = useSelector(state => state.employee.highlightsData);
-
-  const loading = useSelector(state => state.employee.loading);
 
   const [showNotifications, setShowNotifications] = useState(false);
 
-   const handleOutsidePress = () => {
+  const handleOutsidePress = () => {
     setShowNotifications(false);
+  };
+
+  const handleImageUpload = () => {
+    const tabNavigation = navigation.getParent?.();
+    if (tabNavigation?.navigate) {
+      tabNavigation.navigate('Dashboard', {screen: 'ProfileScreen'});
+      return;
+    }
+    navigation.navigate('ProfileScreen');
   };
 
   useEffect(() => {
@@ -59,207 +61,161 @@ const PayrollScreen = ({navigation}) => {
           dispatch(fetchEmployeeHighlights());
         }
       } catch (e) {
-        console.log('❌ Error fetching empId:', e);
+        console.log('Error fetching employee data:', e);
       }
     };
     fetchData();
   }, [dispatch]);
 
   useEffect(() => {
-      if (employee) setAllRecord(employee);
-      if (notifications) setGetNotifications(notifications.data || []);
-    }, [employee, notifications]);
-  
+    if (employee) setAllRecord(employee);
+    if (notifications) setGetNotifications(notifications.data || []);
+  }, [employee, notifications]);
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* HEADER */}
-
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-             <View style={styles.headerLeft}>
-               <View style={styles.profilePicContainer}>
-                 {allRecord?.photoUrl ? (
-                   <Image
-                     source={{uri: allRecord.photoUrl}}
-                     style={styles.profilePic}
-                   />
-                 ) : (
-                   <View style={styles.initialsContainer}>
-                     <Text style={styles.initialsText}>
-                       {allRecord?.firstName
-                         ? allRecord.firstName.substring(0, 2).toUpperCase()
-                         : ''}
-                     </Text>
-                   </View>
-                 )}
-     
-                 <TouchableOpacity
-                   style={styles.plusIconContainer}
-                  //  onPress={handleImageUpload}
-                  >
-                   <Image
-                     source={require('../../src/assets/dashboardIcon/plusicon.png')}
-                     style={styles.icon}
-                     resizeMode="contain"
-                   />
-                 </TouchableOpacity>
-               </View>
-     
-               <View style={{flex: 1}}>
-                 <Text style={styles.greeting}>Hello,</Text>
-                 <TextTicker
-                   style={styles.greeting}
-                   duration={5000}
-                   loop
-                   bounce={false}
-                   numberOfLines={1}
-                   repeatSpacer={60}
-                   marqueeDelay={500}>
-                   {allRecord?.firstName} {allRecord?.lastName}
-                 </TextTicker>
-               </View>
-             </View>
-     
-             <View style={styles.headerRight}>
-               <TouchableOpacity onPress={() => setShowNotifications(true)}>
-                 <Image
-                   source={require('../assets/victorIconImage/bell.png')}
-                   style={styles.eyeImage}
-                   resizeMode="contain"
-                 />
-                 {getNotifications.length > 0 && (
-                   <View style={styles.notificationBadge}>
-                     <Text style={styles.badgeText}>{getNotifications.length}</Text>
-                   </View>
-                 )}
-               </TouchableOpacity>
-     
-               <Image
-                 source={orgDetails?.logo ? {uri: orgDetails?.logo} : ''}
-                 style={styles.companyLogo}
-               />
-               <Modal
-                 transparent
-                 visible={showNotifications}
-                 animationType="fade"
-                 onRequestClose={handleOutsidePress}
-                 >
-                 <Pressable
-                   style={styles.modalBackground}
-                   onPress={handleOutsidePress}
-                   >
-                   <Pressable
-                     style={styles.notificationPanel}
-                     onPress={e => e.stopPropagation()}>
-                     <View style={styles.panelHeader}>
-                       <Text style={styles.panelTitle}>Notifications</Text>
-                       <TouchableOpacity
-                        onPress={handleOutsidePress}
-                       >
-                         <Image
-                           source={require('../assets/victorIconImage/bell.png')}
-                           style={styles.eyeImage}
-                           resizeMode="contain"
-                         />
-                       </TouchableOpacity>
-                     </View>
-                     {getNotifications.length > 0 ? (
-                       getNotifications.map((note, index) => (
-                         <View key={index}>
-                           <Text style={styles.notificationText}>
-                             {note.message || 'New notification'} :-{' '}
-                             <Text style={{color: 'red'}}>{note.title}</Text>
-                           </Text>
-                         </View>
-                       ))
-                     ) : (
-                       <Text style={styles.notificationText}>No notifications</Text>
-                     )}
-                   </Pressable>
-                 </Pressable>
-               </Modal>
-             </View>
-           </View>
+          <View style={styles.headerLeft}>
+            <View style={styles.profilePicContainer}>
+              {allRecord?.photoUrl ? (
+                <Image
+                  source={{uri: allRecord.photoUrl}}
+                  style={styles.profilePic}
+                />
+              ) : (
+                <View style={styles.initialsContainer}>
+                  <Text style={styles.initialsText}>
+                    {allRecord?.firstName
+                      ? allRecord.firstName.substring(0, 2).toUpperCase()
+                      : ''}
+                  </Text>
+                </View>
+              )}
 
-      {/* TOP TABS */}
+              <TouchableOpacity
+                style={styles.plusIconContainer}
+                onPress={handleImageUpload}>
+                <Image
+                  source={require('../../src/assets/dashboardIcon/plusicon.png')}
+                  style={styles.icon}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
 
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('PayrollSalary')}>
-          <Text style={styles.tabText}>Salary</Text>
-        </TouchableOpacity>
+            <View style={{flex: 1, marginLeft: -30}}>
+              <Text style={styles.greeting}>Hello,</Text>
+              <TextTicker
+                style={styles.greeting}
+                duration={5000}
+                loop
+                bounce={false}
+                numberOfLines={1}
+                repeatSpacer={60}
+                marqueeDelay={500}>
+                {allRecord?.firstName} {allRecord?.lastName}
+              </TextTicker>
+            </View>
+          </View>
 
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('PayrollTaxation')}>
-          <Text style={styles.tabText}>Taxation</Text>
-        </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity onPress={() => setShowNotifications(true)}>
+              <Image
+                source={require('../assets/victorIconImage/bell.png')}
+                style={styles.eyeImage}
+                resizeMode="contain"
+              />
+              {getNotifications.length > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.badgeText}>{getNotifications.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('PayrollClaims')}>
-          <Text style={styles.tabText}>Claims</Text>
-        </TouchableOpacity>
+            <Image
+              source={orgDetails?.logo ? {uri: orgDetails?.logo} : ''}
+              style={styles.companyLogo}
+            />
+            <Modal
+              transparent
+              visible={showNotifications}
+              animationType="fade"
+              onRequestClose={handleOutsidePress}>
+              <Pressable
+                style={styles.modalBackground}
+                onPress={handleOutsidePress}>
+                <Pressable
+                  style={styles.notificationPanel}
+                  onPress={e => e.stopPropagation()}>
+                  <View style={styles.panelHeader}>
+                    <Text style={styles.panelTitle}>Notifications</Text>
+                    <TouchableOpacity onPress={handleOutsidePress}>
+                      <Image
+                        source={require('../assets/victorIconImage/bell.png')}
+                        style={styles.eyeImage}
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {getNotifications.length > 0 ? (
+                    getNotifications.map((note, index) => (
+                      <View key={index}>
+                        <Text style={styles.notificationText}>
+                          {note.message || 'New notification'} :-{' '}
+                          <Text style={{color: 'red'}}>{note.title}</Text>
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.notificationText}>No notifications</Text>
+                  )}
+                </Pressable>
+              </Pressable>
+            </Modal>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('PayrollRequests')}>
-          <Text style={styles.tabText}>Requests</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.payrollSection}>
+          <View style={styles.payrollContentCard}>
+            <View style={styles.tabs}>
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => navigation.navigate('PayrollSalary')}>
+                <Text style={styles.tabText}>Salary</Text>
+              </TouchableOpacity>
 
-      {/* PAYROLL DASHBOARD */}
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => navigation.navigate('PayrollTaxation')}>
+                <Text style={styles.tabText}>Taxation</Text>
+              </TouchableOpacity>
 
-      <PayrollDashboard />
-    </ScrollView>
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => navigation.navigate('PayrollClaims')}>
+                <Text style={styles.tabText}>Claims</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => navigation.navigate('PayrollRequests')}>
+                <Text style={styles.tabText}>Requests</Text>
+              </TouchableOpacity>
+            </View>
+
+            <PayrollDashboard navigation={navigation} />
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 export default PayrollScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F1F1',
-  },
-
-  // header: {
-  //   backgroundColor: '#4A2C2A',
-  //   paddingHorizontal: 20,
-  //   paddingTop: 22,
-  //   paddingBottom: 24,
-  //   borderBottomLeftRadius: 24,
-  //   borderBottomRightRadius: 24,
-  // },
-
-  headerTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#F3ECEC',
-    marginHorizontal: 16,
-    marginTop: 18,
-    borderRadius: 30,
-    padding: 4,
-  },
-
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 11,
-    borderRadius: 24,
-  },
-
-  tabText: {
-    color: '#555',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-   container: {flex: 1, backgroundColor: '#F5F5F5'},
+  container: {flex: 1, backgroundColor: '#F5F5F5'},
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -308,6 +264,34 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   headerRight: {flexDirection: 'row', alignItems: 'center', zIndex: 1, gap: 15},
+  payrollSection: {backgroundColor: '#452300'},
+  payrollContentCard: {
+    backgroundColor: '#F2E7E6',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 15,
+    paddingBottom: 8,
+    minHeight: 120,
+  },
+  tabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F3ECEC',
+    marginHorizontal: 16,
+    marginTop: 4,
+    borderRadius: 30,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 11,
+    borderRadius: 24,
+  },
+  tabText: {
+    color: '#555',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   notificationBadge: {
     position: 'absolute',
     top: -6,

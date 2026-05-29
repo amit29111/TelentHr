@@ -52,7 +52,7 @@ export const ENDPOINT = {
     MY_PAYSLIPS: financialYear =>
       `payRoll/employee/myPayslips?financialYear=${financialYear}`,
     ANNUAL_SALARY_STATEMENT: financialYear =>
-      `payRoll/employee/myPayslips?financialYear=${financialYear}`,
+      `payRoll/employee/annualSalaryStatement?financialYear=${financialYear}`,
     SALARY_PDF_DOWNLOAD: payslipId =>
       `payroll/employee/getMySalaryPdfdownload/${payslipId}`,
     DASHBOARD: 'payroll/employee/dashboard',

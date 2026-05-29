@@ -7,44 +7,24 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
-  Share,
-  Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import RNFS from 'react-native-fs';
+import DownloadIconButton from '../components/DownloadIconButton';
+import ViewIconButton from '../components/ViewIconButton';
 import apiClient from '../api/apiClient';
 import {ENDPOINT} from '../api/endpoint';
-
-const BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
+import {downloadAuthenticatedFile} from '../utils/payrollDownload';
+import {resolveAnnualStatementId} from '../utils/payrollAnnualStatement';
 
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 
-const downloadFromEndpoint = async endpointPath => {
-  const authToken = await AsyncStorage.getItem('authToken');
-  const orgId = await AsyncStorage.getItem('orgId');
-  if (!authToken) throw new Error('Please login again.');
-
-  const fileName = `payroll_${Date.now()}.pdf`;
-  const destPath =
-    Platform.OS === 'ios'
-      ? `${RNFS.DocumentDirectoryPath}/${fileName}`
-      : `${RNFS.DownloadDirectoryPath}/${fileName}`;
-
-  const result = await RNFS.downloadFile({
-    fromUrl: `${BASE_URL}${endpointPath}`,
-    toFile: destPath,
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      ...(orgId ? {org_uuid: orgId} : {}),
-    },
-  }).promise;
-
-  if (result.statusCode !== 200) throw new Error('Download failed.');
-  const fileUrl = Platform.OS === 'android' ? `file://${destPath}` : destPath;
-  await Share.share({url: fileUrl, title: 'Payroll file'});
+const downloadFromEndpoint = async (endpointPath, fileName) => {
+  await downloadAuthenticatedFile({
+    url: endpointPath,
+    fileName,
+  });
 };
 
-const PayrollDashboard = () => {
+const PayrollDashboard = ({navigation}) => {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedFY, setSelectedFY] = useState('2026-27');
@@ -87,6 +67,38 @@ const PayrollDashboard = () => {
   const recentPayslips = dashboard?.recentPayslips || [];
   const statements = dashboard?.annualSalaryStatements || [];
 
+  const handleAnnualStatementView = async statement => {
+    const fy = statement.financialYear;
+    setDownloading(`ANNUAL_${fy}`);
+    try {
+      const statementId = await resolveAnnualStatementId(fy);
+      if (!statementId) {
+        if (navigation) {
+          navigation.navigate('PayrollSalary', {
+            initialAnnualYear: statement.label?.replace(/^FY\s*/i, '') || fy,
+          });
+          return;
+        }
+        Alert.alert(
+          'Not available',
+          'Annual salary statement is not available for this financial year.',
+        );
+        return;
+      }
+      await downloadAuthenticatedFile({
+        url: ENDPOINT.PAYROLL.SALARY_PDF_DOWNLOAD(statementId),
+        fileName: `annual_salary_${fy}.pdf`,
+      });
+    } catch (e) {
+      Alert.alert(
+        'Error',
+        e?.message || 'Unable to open annual salary statement.',
+      );
+    } finally {
+      setDownloading('');
+    }
+  };
+
   const handleForm16Download = async part => {
     const endpointPath =
       part === 'A'
@@ -94,7 +106,10 @@ const PayrollDashboard = () => {
         : ENDPOINT.PAYROLL.FORM16_PART_B(selectedFY);
     setDownloading(`FORM16_${part}`);
     try {
-      await downloadFromEndpoint(endpointPath);
+      await downloadFromEndpoint(
+        endpointPath,
+        `form16_part_${part.toLowerCase()}_${selectedFY}.pdf`,
+      );
     } catch (e) {
       Alert.alert('Download failed', e?.message || 'Unable to download Form 16.');
     } finally {
@@ -111,7 +126,11 @@ const PayrollDashboard = () => {
   }
 
   return (
-    <ScrollView style={{flex: 1, backgroundColor: '#F3F4F6'}} contentContainerStyle={{paddingBottom: 20}}>
+    <ScrollView
+      style={styles.dashboardScroll}
+      contentContainerStyle={styles.dashboardScrollContent}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled>
       <View style={styles.salaryCard}>
         <Text style={styles.salaryMonth}>{current.month || '—'} {current.year || ''} Salary</Text>
         <Text style={styles.salaryAmount}>{money(current.netPay)}</Text>
@@ -179,52 +198,68 @@ const PayrollDashboard = () => {
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Annual Salary Statement</Text>
-        {statements.map((s, idx) => (
-          <View style={styles.rowBetween} key={`st-${idx}`}>
-            <Text>{s.label || s.financialYear}</Text>
-            <TouchableOpacity style={styles.viewBtn}>
-              <Text style={styles.viewBtnText}>View</Text>
-            </TouchableOpacity>
-          </View>
-        ))}
+        {statements.length === 0 ? (
+          <Text style={styles.emptyHint}>No annual salary statement available.</Text>
+        ) : (
+          statements.map((s, idx) => (
+            <View style={styles.rowBetween} key={`st-${idx}`}>
+              <View style={styles.statementInfo}>
+                <Text style={styles.statementLabel}>{s.label || s.financialYear}</Text>
+                {s.totalNet != null ? (
+                  <Text style={styles.statementMeta}>
+                    Net: {money(s.totalNet)} · {s.payrollCount || 0} payslips
+                  </Text>
+                ) : null}
+              </View>
+              <ViewIconButton
+                loading={downloading === `ANNUAL_${s.financialYear}`}
+                onPress={() => handleAnnualStatementView(s)}
+              />
+            </View>
+          ))
+        )}
 
         <Text style={[styles.sectionTitle, {marginTop: 12}]}>Form 16</Text>
-        <TouchableOpacity
-          style={styles.fyPicker}
-          onPress={() => setShowFyDropdown(!showFyDropdown)}>
-          <Text style={{fontWeight: '600'}}>Financial Year : {selectedFY}</Text>
-          <Text>{showFyDropdown ? '▲' : '▼'}</Text>
-        </TouchableOpacity>
-        {showFyDropdown && (
-          <View style={styles.dropdown}>
-            {fyOptions.map(f => (
-              <TouchableOpacity
-                key={f.key}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setSelectedFY(f.key);
-                  setShowFyDropdown(false);
-                }}>
-                <Text>{f.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        <View style={styles.rowBetween}>
-          <Text>Part B</Text>
-          <TouchableOpacity style={styles.viewBtn} onPress={() => handleForm16Download('B')}>
-            <Text style={styles.viewBtnText}>
-              {downloading === 'FORM16_B' ? '...' : 'Download'}
+        <View style={styles.dropdownWrap}>
+          <TouchableOpacity
+            style={styles.fyPicker}
+            onPress={() => setShowFyDropdown(!showFyDropdown)}>
+            <Text style={styles.fyPickerText} numberOfLines={1}>
+              FY : {selectedFY}
             </Text>
+            <Text style={styles.fyArrow}>{showFyDropdown ? '▲' : '▼'}</Text>
           </TouchableOpacity>
+          {showFyDropdown && (
+            <View style={styles.dropdown}>
+              <ScrollView nestedScrollEnabled style={styles.dropdownScroll}>
+                {fyOptions.map(f => (
+                  <TouchableOpacity
+                    key={f.key}
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setSelectedFY(f.key);
+                      setShowFyDropdown(false);
+                    }}>
+                    <Text style={styles.dropdownItemText}>{f.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
         <View style={styles.rowBetween}>
-          <Text>Part A</Text>
-          <TouchableOpacity style={styles.viewBtn} onPress={() => handleForm16Download('A')}>
-            <Text style={styles.viewBtnText}>
-              {downloading === 'FORM16_A' ? '...' : 'Download'}
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.partLabel}>Part B</Text>
+          <DownloadIconButton
+            loading={downloading === 'FORM16_B'}
+            onPress={() => handleForm16Download('B')}
+          />
+        </View>
+        <View style={styles.rowBetween}>
+          <Text style={styles.partLabel}>Part A</Text>
+          <DownloadIconButton
+            loading={downloading === 'FORM16_A'}
+            onPress={() => handleForm16Download('A')}
+          />
         </View>
       </View>
 
@@ -268,6 +303,13 @@ const PayrollDashboard = () => {
 };
 
 const styles = StyleSheet.create({
+  dashboardScroll: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  dashboardScrollContent: {
+    paddingBottom: 20,
+  },
   sectionCard: {backgroundColor: '#FFFFFF', borderRadius: 18, margin: 16, padding: 16},
   sectionTitle: {fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 14},
   salaryCard: {backgroundColor: '#2D3A8C', borderRadius: 16, margin: 16, padding: 20},
@@ -297,11 +339,41 @@ const styles = StyleSheet.create({
   netSalaryTitle: {fontSize: 14, fontWeight: '600', color: '#111'},
   netSalaryValue: {fontSize: 16, fontWeight: '700', color: '#2563EB'},
   rowBetween: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 6},
-  viewBtn: {backgroundColor: '#2D3A8C', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 16},
-  viewBtnText: {color: '#fff', fontWeight: 'bold'},
-  fyPicker: {backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8},
-  dropdown: {backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, marginBottom: 10},
-  dropdownItem: {paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#EEE'},
+  statementInfo: {flex: 1, paddingRight: 10},
+  statementLabel: {fontSize: 13, fontWeight: '600', color: '#111'},
+  statementMeta: {fontSize: 11, color: '#6B7280', marginTop: 2},
+  emptyHint: {fontSize: 12, color: '#6B7280', marginBottom: 8},
+  partLabel: {fontSize: 13, color: '#111'},
+  dropdownWrap: {alignSelf: 'flex-start', maxWidth: '70%', marginBottom: 8, zIndex: 20},
+  fyPicker: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minWidth: 140,
+  },
+  fyPickerText: {fontSize: 12, fontWeight: '600', color: '#111', flex: 1, marginRight: 6},
+  fyArrow: {fontSize: 10, color: '#666'},
+  dropdown: {
+    position: 'absolute',
+    top: 36,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    elevation: 8,
+    zIndex: 30,
+  },
+  dropdownScroll: {maxHeight: 120},
+  dropdownItem: {paddingHorizontal: 10, paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: '#EEE'},
+  dropdownItemText: {fontSize: 12, color: '#111'},
   claimListCard: {backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10},
   claimRow: {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB'},
   claimLabel: {fontSize: 13, color: '#555', flex: 1},

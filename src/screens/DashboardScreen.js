@@ -41,6 +41,15 @@ const DashboardScreen = ({navigation}) => {
     setShowNotifications(false);
   };
 
+  const navigateToPayroll = () => {
+    const tabNavigation = navigation.getParent?.();
+    if (tabNavigation?.navigate) {
+      tabNavigation.navigate('Payroll', {screen: 'PayrollDashboard'});
+      return;
+    }
+    navigation.navigate('Payroll', {screen: 'PayrollDashboard'});
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -178,7 +187,7 @@ const DashboardScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
-          <View style={{flex: 1}}>
+          <View style={{flex: 1, marginLeft: -30}}>
             <Text style={styles.greeting}>Hello,</Text>
             <TextTicker
               style={styles.greeting}
@@ -337,8 +346,7 @@ const DashboardScreen = ({navigation}) => {
                     {backgroundColor: card.backgroundColor || '#EBEBEB'},
                   ]}
                   onPress={() => {
-                    if (card.title === 'Payroll')
-                      navigation.navigate('MyPayRollScreen');
+                    if (card.title === 'Payroll') navigateToPayroll();
                     else if (card.title === 'Apply Leave')
                       navigation.navigate('LeaveScreen');
                     else if (card.title === 'Attendance')
@@ -373,8 +381,11 @@ const DashboardScreen = ({navigation}) => {
                     {backgroundColor: card.backgroundColor},
                   ]}
                   onPress={() => {
+                    if (card.title === 'My Payroll') {
+                      navigateToPayroll();
+                      return;
+                    }
                     const screenMap = {
-                      'My Payroll': 'MyPayRollScreen',
                       Attendance: 'AttendanceScreen',
                       Leave: 'LeaveScreen',
                       'Raise Concern': 'RaiseConcernScreen',
