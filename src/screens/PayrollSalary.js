@@ -20,7 +20,85 @@ import apiClient from '../api/apiClient';
 import {ENDPOINT} from '../api/endpoint';
 
 const PAYSLIP_YEARS = ['2021', '2022', '2023', '2024', '2025', '2026'];
-const FINANCIAL_YEARS = ['2021-2022', '2022-2023', '2023-2024', '2024-2025', '2025-2026'];
+const FINANCIAL_YEARS = [
+  '2021-2022',
+  '2022-2023',
+  '2023-2024',
+  '2024-2025',
+  '2025-2026',
+  '2026-2027',
+];
+
+/** Calendar year dropdown → FY string for API e.g. 2026 → 2025-2026 */
+const toFinancialYearParam = value => {
+  if (!value) return '';
+  if (String(value).includes('-')) return value;
+  const y = Number(value);
+  if (Number.isNaN(y)) return value;
+  return `${y - 1}-${y}`;
+};
+
+const fyQueryVariants = value => {
+  const full = toFinancialYearParam(value);
+  const m = full.match(/^(\d{4})-(\d{4})$/);
+  const short = m ? `${m[1]}-${m[2].slice(-2)}` : null;
+  return [...new Set([full, short].filter(Boolean))];
+};
+
+/** Calendar year from payslip record (for client-side filter when API returns all rows) */
+const getPayslipCalendarYear = item => {
+  const date = getPayslipDate(item);
+  if (date) {
+    const d = new Date(date);
+    if (!Number.isNaN(d.getTime())) return String(d.getFullYear());
+  }
+  if (item?.year != null && String(item.year) !== '—') {
+    return String(item.year);
+  }
+  const period =
+    item?.payPeriod ||
+    item?.pay_period ||
+    item?.period ||
+    item?.monthYear ||
+    item?.payMonth ||
+    '';
+  const fromPeriod = String(period).match(/\b(20\d{2})\b/);
+  if (fromPeriod) return fromPeriod[1];
+  return '';
+};
+
+const filterPayslipsByCalendarYear = (items, calendarYear) => {
+  const target = String(calendarYear);
+  return items.filter(item => getPayslipCalendarYear(item) === target);
+};
+
+const financialYearTokens = value => {
+  const full = toFinancialYearParam(value);
+  const m = full.match(/^(\d{4})-(\d{4})$/);
+  const short = m ? `${m[1]}-${m[2].slice(-2)}` : full;
+  return [...new Set([full, short, value].filter(Boolean))];
+};
+
+const filterAnnualByFinancialYear = (items, financialYear) => {
+  if (!items.length) return [];
+  const tokens = financialYearTokens(financialYear);
+  const hasAnyFy = items.some(
+    item => item?.financialYear || item?.financial_year || item?.fy,
+  );
+  if (!hasAnyFy) return items;
+  return items.filter(item => {
+    const itemFy = String(
+      item?.financialYear || item?.financial_year || item?.fy || '',
+    ).trim();
+    if (!itemFy) return false;
+    return tokens.some(t => itemFy === t || itemFy.includes(t));
+  });
+};
+
+const getErrorMessage = error =>
+  error?.response?.data?.message ||
+  error?.message ||
+  'Request failed. Please try again.';
 
 const BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
 
@@ -211,7 +289,7 @@ const PayrollSalary = ({navigation}) => {
   const [showPayslipYearDropdown, setShowPayslipYearDropdown] = useState(false);
   const [showAnnualYearDropdown, setShowAnnualYearDropdown] = useState(false);
   const [selectedPayslipYear, setSelectedPayslipYear] = useState('2026');
-  const [selectedAnnualYear, setSelectedAnnualYear] = useState('2025-2026');
+  const [selectedAnnualYear, setSelectedAnnualYear] = useState('2026-2027');
   const [loadedPayslipYear, setLoadedPayslipYear] = useState('');
   const [loadedAnnualYear, setLoadedAnnualYear] = useState('');
   const [payslips, setPayslips] = useState([]);
@@ -229,48 +307,90 @@ const PayrollSalary = ({navigation}) => {
     setLoadingPayslips(true);
     setLoadedPayslipYear('');
     setPayslips([]);
+    let lastError = null;
     try {
-      const res = await apiClient.get(ENDPOINT.PAYROLL.MY_PAYSLIPS(year));
-      const list = extractPayslipList(res?.data ?? {});
-      setPayslips(list.map(mapPayslip));
-      setLoadedPayslipYear(year);
-    } catch (error) {
-      setPayslips([]);
-      setLoadedPayslipYear(year);
-      Alert.alert('Error', error?.message || 'Failed to load payslips.');
+      for (const fy of fyQueryVariants(year)) {
+        try {
+          const res = await apiClient.get(ENDPOINT.PAYROLL.MY_PAYSLIPS(fy));
+          const rawList = extractPayslipList(res?.data ?? {});
+          const list = filterPayslipsByCalendarYear(rawList, year);
+          setPayslips(list.map(mapPayslip));
+          setLoadedPayslipYear(year);
+          lastError = null;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) {
+        setPayslips([]);
+        setLoadedPayslipYear(year);
+        Alert.alert('Error', getErrorMessage(lastError));
+      }
     } finally {
       setLoadingPayslips(false);
       setRefreshing(false);
     }
   }, []);
 
-  const fetchAnnualStatements = useCallback(async financialYear => {
+  const fetchAnnualStatements = useCallback(async (financialYear, silent = false) => {
     if (!financialYear) return;
-     const year = financialYear.split('-')[1];
     setLoadingAnnual(true);
     setLoadedAnnualYear('');
     setAnnualStatements([]);
+    let lastError = null;
     try {
-      // console.log('Fetching annual statement for', financialYear);
-      const res = await apiClient.get(
-        ENDPOINT.PAYROLL.ANNUAL_SALARY_STATEMENT(year),
-      );
-      const list = extractAnnualStatements(res?.data ?? {});
-      setAnnualStatements(list.map((item, idx) => mapAnnualStatement(item, idx, financialYear)));
-      setLoadedAnnualYear(financialYear);
-    } catch (error) {
-      setAnnualStatements([]);
-      setLoadedAnnualYear(financialYear);
-      Alert.alert('Error', error?.message || 'Failed to load annual statement.');
+      for (const fy of fyQueryVariants(financialYear)) {
+        try {
+          const res = await apiClient.get(
+            ENDPOINT.PAYROLL.ANNUAL_SALARY_STATEMENT(fy),
+          );
+          const rawList = extractAnnualStatements(res?.data ?? {});
+          const list = filterAnnualByFinancialYear(rawList, financialYear);
+          setAnnualStatements(
+            list.map((item, idx) => mapAnnualStatement(item, idx, financialYear)),
+          );
+          setLoadedAnnualYear(financialYear);
+          lastError = null;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) {
+        setAnnualStatements([]);
+        setLoadedAnnualYear(financialYear);
+        if (!silent) {
+          Alert.alert('Error', getErrorMessage(lastError));
+        }
+      }
     } finally {
       setLoadingAnnual(false);
     }
   }, []);
 
+  const loadSalaryData = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      await Promise.allSettled([
+        fetchPayslips(selectedPayslipYear, isRefresh),
+        fetchAnnualStatements(selectedAnnualYear, true),
+      ]);
+    },
+    [
+      selectedPayslipYear,
+      selectedAnnualYear,
+      fetchPayslips,
+      fetchAnnualStatements,
+    ],
+  );
+
   useEffect(() => {
-    fetchPayslips(selectedPayslipYear);
-    fetchAnnualStatements(selectedAnnualYear);
-  }, [fetchPayslips, fetchAnnualStatements]);
+    const unsub = navigation.addListener('focus', () => {
+      loadSalaryData();
+    });
+    return unsub;
+  }, [navigation, loadSalaryData]);
 
   const handlePayslipYearSelect = year => {
     setSelectedPayslipYear(year);
@@ -394,7 +514,9 @@ const PayrollSalary = ({navigation}) => {
           <View style={styles.contentSection}>
             {payslips.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No payslips for {selectedPayslipYear}</Text>
+                <Text style={styles.emptyText}>
+                  No record found for year {selectedPayslipYear}
+                </Text>
               </View>
             ) : (
               payslips.map((item, index) => {
@@ -477,7 +599,9 @@ const PayrollSalary = ({navigation}) => {
               <ActivityIndicator size="small" color="#2952E3" style={{marginVertical: 10}} />
             ) : showAnnualContent && annualStatements.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyText}>No annual statement for {selectedAnnualYear}</Text>
+                <Text style={styles.emptyText}>
+                  No record found for financial year {selectedAnnualYear}
+                </Text>
               </View>
             ) : showAnnualContent ? (
               annualStatements.map((item, index) => (

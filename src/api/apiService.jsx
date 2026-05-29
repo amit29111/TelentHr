@@ -1,3 +1,4 @@
+import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiAuth from './authConfig';
 import { ENDPOINT } from './endpoint';
@@ -187,7 +188,6 @@ const apiService = {
     }
   },
   async getMyPayslips(financialYear) {
-    console.log('financialYear', financialYear);
     try {
       const response = await apiClient.get(
         ENDPOINT.PAYROLL.MY_PAYSLIPS(financialYear),
@@ -261,6 +261,81 @@ const apiService = {
     try {
       const response = await apiClient.get(
         ENDPOINT.PAYROLL.FORM16_PART_B(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getInvestmentDeclaration(empId, financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.TDS_EMPLOYEE(empId, financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async putInvestmentDeclaration(payload) {
+    try {
+      const response = await apiClient.put(
+        ENDPOINT.PAYROLL.TDS_INVESTMENT_DECLARATION,
+        payload,
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async uploadFile(asset) {
+    try {
+      const formData = new FormData();
+      const uri =
+        Platform.OS === 'android'
+          ? asset.uri
+          : asset.uri.replace('file://', '');
+      formData.append('file', {
+        uri,
+        type: asset.type || 'image/jpeg',
+        name: asset.fileName || `upload_${Date.now()}.jpg`,
+      });
+      const response = await apiClient.post(
+        ENDPOINT.PAYROLL.FILE_UPLOAD,
+        formData,
+        {headers: {'Content-Type': 'multipart/form-data'}},
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async submitProofOfInvestment(formData) {
+    try {
+      const response = await apiClient.put(
+        ENDPOINT.PAYROLL.TDS_PROOF_OF_INVESTMENT,
+        formData,
+        {headers: {'Content-Type': 'multipart/form-data'}},
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getTaxReport(financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.TDS_TAX_REPORT(financialYear),
+      );
+      return response.data;
+    } catch (error) {
+      throw handleError(error);
+    }
+  },
+  async getForm16(financialYear) {
+    try {
+      const response = await apiClient.get(
+        ENDPOINT.PAYROLL.FORM16(financialYear),
       );
       return response.data;
     } catch (error) {

@@ -49,9 +49,10 @@ export const ENDPOINT = {
     MY_CLAIMS: 'payRoll/employee/myClaims',
     REIMBURSEMENT_HEADS: 'payRoll/employee/reimbursementHeads',
     SUBMIT_CLAIM: 'payRoll/employee/submitClaim',
-    MY_PAYSLIPS: year => `payRoll/employee/myPayslips?year=${year}`,
+    MY_PAYSLIPS: financialYear =>
+      `payRoll/employee/myPayslips?financialYear=${financialYear}`,
     ANNUAL_SALARY_STATEMENT: financialYear =>
-      `payRoll/employee/annualSalaryStatement?financialYear=${financialYear}`,
+      `payRoll/employee/myPayslips?financialYear=${financialYear}`,
     SALARY_PDF_DOWNLOAD: payslipId =>
       `payroll/employee/getMySalaryPdfdownload/${payslipId}`,
     DASHBOARD: 'payroll/employee/dashboard',
@@ -63,6 +64,19 @@ export const ENDPOINT = {
     VPF_APPROVE: requestId => `payroll/employee/vpf/${requestId}/approve`,
     VPF_ALL: 'payroll/vpf/all',
     EMPLOYEE_VPF: 'payroll/employee/vpf',
+    TDS_EMPLOYEE: (empId, financialYear) =>
+      `payRoll/tds/employee/${empId}?financialYear=${financialYear}`,
+    TDS_INVESTMENT_DECLARATION: 'payroll/tds/investment-declaration',
+    TDS_PROOF_OF_INVESTMENT: 'payroll/tds/proof-of-investment',
+    FILE_UPLOAD: 'upload/file',
+    TDS_TAX_REPORT: financialYear =>
+      `payRoll/tds/tax-report?financialYear=${financialYear}`,
+    TDS_TAX_REPORT_DOWNLOAD: financialYear =>
+      `payRoll/tds/tax-report/download?financialYear=${financialYear}`,
+    FORM16: financialYear =>
+      `payRoll/employee/form16?financialYear=${financialYear}`,
+    FORM16_DOWNLOAD: financialYear =>
+      `payRoll/employee/form16/download?financialYear=${financialYear}`,
   },
 };
 
