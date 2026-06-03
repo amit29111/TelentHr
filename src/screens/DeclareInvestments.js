@@ -22,6 +22,9 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Feather from 'react-native-vector-icons/Feather';
 
 import apiService from '../api/apiService';
+import SaveAndCompareModal, {
+  extractSaveAndCompare,
+} from '../components/SaveAndCompareModal';
 
 const INVESTMENT_80C_OPTIONS = [
   'PPF',
@@ -52,15 +55,35 @@ const URBANIZATION_OPTIONS = ['Metro', 'Non-Metro'];
 /** API uses full year e.g. 2026-2027 (same as web) */
 const toApiFinancialYear = fy => {
   if (!fy) return '';
-  const full = fy.match(/^(\d{4})-(\d{4})$/);
-  if (full) return fy;
-  const short = fy.match(/^(\d{4})-(\d{2})$/);
+  // normalize separators and strip FY prefix if present
+  let s = String(fy).trim();
+  s = s.replace(/^[Ff][Yy]\s*/i, '');
+  s = s.replace(/[–—]/g, '-');
+  s = s.replace(/\s*-\s*/, '-');
+  const full = s.match(/^(\d{4})-(\d{4})$/);
+  if (full) return `${full[1]}-${full[2]}`;
+  const short = s.match(/^(\d{4})-(\d{2})$/);
   if (short) {
     const end =
       Number(short[2]) < 50 ? 2000 + Number(short[2]) : 1900 + Number(short[2]);
     return `${short[1]}-${end}`;
   }
   return fy;
+};
+
+// Parse a user-entered financial year and return API full format or null when invalid
+const parseFinancialYearInput = input => {
+  if (!input) return null;
+  let s = String(input).trim();
+  s = s.replace(/[–—]/g, '-');
+  // capture optional FY prefix, then start-year and end-year (2 or 4 digits)
+  const m = s.match(/^(?:FY)?\s*(\d{4})-(\d{2,4})$/i);
+  if (!m) return null;
+  const start = m[1];
+  const endPart = m[2];
+  if (endPart.length === 4) return `${start}-${endPart}`;
+  const end = Number(endPart) < 50 ? 2000 + Number(endPart) : 1900 + Number(endPart);
+  return `${start}-${end}`;
 };
 
 const toShortFinancialYear = fy => {
@@ -226,6 +249,7 @@ const defaultInvestmentRow = () => ({
 
 const defaultForm = apiFy => ({
   financialYear: apiFy || '',
+  taxRegime: 'new',
   investments80C: [defaultInvestmentRow()],
   investments80D: [defaultInvestmentRow()],
   itDeclaration: {
@@ -314,6 +338,12 @@ const mapFromApi = (raw, apiFy) => {
 
   return {
     financialYear: d.financialYear || toApiFinancialYear(apiFy) || '',
+    taxRegime:
+      d.taxRegime === 'old' || d.taxRegime === 'new'
+        ? d.taxRegime
+        : d.selectedTaxRegime === 'old' || d.selectedTaxRegime === 'new'
+          ? d.selectedTaxRegime
+          : 'new',
     investments80C,
     investments80D,
     itDeclaration: {
@@ -386,6 +416,7 @@ const buildPayload = form => {
   const home = it.homeLoanSelfOccupied;
   return {
     financialYear: toShortFinancialYear(form.financialYear) || form.financialYear,
+    taxRegime: form.taxRegime === 'old' ? 'old' : 'new',
     investments80C: form.investments80C.map(i => ({
       investmentType: i.investmentType || '',
       amount: Number(i.amount) || 0,
@@ -451,9 +482,19 @@ const DeclareInvestments = ({navigation, route}) => {
     route?.params?.financialYear || toApiFinancialYear(displayYear);
 
   const [form, setForm] = useState(() => defaultForm(apiFinancialYear));
+  // new state to manage flexible FY input for Financial Year box
+  const [fyInput, setFyInput] = useState(() => {
+    const initialFy = (defaultForm(apiFinancialYear).financialYear || apiFinancialYear) || '';
+    // prefer short form like 2025-26 for display
+    return initialFy ? toShortFinancialYear(initialFy) : '';
+  });
+  const [fyError, setFyError] = useState('');
   const [proofMeta, setProofMeta] = useState({proofStatus: '', proofRemarks: ''});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingCompare, setSavingCompare] = useState(false);
+  const [compareVisible, setCompareVisible] = useState(false);
+  const [saveAndCompare, setSaveAndCompare] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [expanded80C, setExpanded80C] = useState(true);
   const [expanded80D, setExpanded80D] = useState(true);
@@ -468,6 +509,7 @@ const DeclareInvestments = ({navigation, route}) => {
       const empId = await AsyncStorage.getItem('empId');
       if (!empId) {
         setForm(defaultForm(apiFinancialYear));
+        setFyInput(toShortFinancialYear(apiFinancialYear) || '');
         return;
       }
       const {response, financialYear} = await fetchTdsDeclaration(
@@ -480,10 +522,14 @@ const DeclareInvestments = ({navigation, route}) => {
         proofStatus: d?.proofStatus || '',
         proofRemarks: d?.proofRemarks || '',
       });
+      const resolvedFy = mapped.financialYear || financialYear || apiFinancialYear;
       setForm({
         ...mapped,
-        financialYear: mapped.financialYear || financialYear || apiFinancialYear,
+        financialYear: resolvedFy,
       });
+      // set FY input display to short variant
+      setFyInput(resolvedFy ? toShortFinancialYear(resolvedFy) : '');
+      setFyError('');
       if (isProof) {
         setExpanded80C(true);
         setExpanded80D(true);
@@ -493,6 +539,7 @@ const DeclareInvestments = ({navigation, route}) => {
     } catch (error) {
       if (!isProof) {
         setForm(defaultForm(apiFinancialYear));
+        setFyInput(toShortFinancialYear(apiFinancialYear) || '');
       }
       console.warn('TDS load failed:', error?.message || error);
     } finally {
@@ -591,6 +638,10 @@ const DeclareInvestments = ({navigation, route}) => {
   );
 
   const handleSave = async () => {
+    if (fyError) {
+      Alert.alert('Invalid Financial Year', fyError);
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildPayload({
@@ -613,6 +664,68 @@ const DeclareInvestments = ({navigation, route}) => {
     }
   };
 
+  const handleSaveAndCompare = async () => {
+    if (isProof) {
+      handleSave();
+      return;
+    }
+    if (fyError) {
+      Alert.alert('Invalid Financial Year', fyError);
+      return;
+    }
+    setSavingCompare(true);
+    try {
+      const payload = buildPayload({
+        ...form,
+        financialYear: form.financialYear || apiFinancialYear,
+      });
+      const response = await apiService.putInvestmentDeclaration(payload);
+      const compareData = extractSaveAndCompare(response);
+      if (!compareData) {
+        Alert.alert(
+          'Saved',
+          response?.message || 'Declaration saved, but compare data was not returned.',
+        );
+        return;
+      }
+      setSaveAndCompare(compareData);
+      const recommended = compareData.recommendedRegime;
+      if (recommended === 'old' || recommended === 'new') {
+        setForm(prev => ({...prev, taxRegime: recommended}));
+      }
+      setCompareVisible(true);
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Failed to save and compare.');
+    } finally {
+      setSavingCompare(false);
+    }
+  };
+
+  const handleSubmitDeclaration = async () => {
+    if (fyError) {
+      Alert.alert('Invalid Financial Year', fyError);
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = buildPayload({
+        ...form,
+        financialYear: form.financialYear || apiFinancialYear,
+      });
+      const response = await apiService.putInvestmentDeclaration(payload);
+      setCompareVisible(false);
+      Alert.alert(
+        'Success',
+        response?.message || 'Investment declaration submitted successfully.',
+        [{text: 'OK', onPress: () => navigation.goBack()}],
+      );
+    } catch (error) {
+      Alert.alert('Error', error?.message || 'Failed to submit declaration.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderInvestmentSection = (
     title,
     note,
@@ -624,10 +737,17 @@ const DeclareInvestments = ({navigation, route}) => {
     options,
   ) => {
     const enabled = form.itDeclaration.toggles[toggleKey];
+    // const hasRowData = rows.some(
+    //   r => r.investmentType || String(r.amount) || r.attachment,
+    // );
     const hasRowData = rows.some(
-      r => r.investmentType || String(r.amount) || r.attachment,
-    );
-    const showBody = expanded && (enabled || hasRowData);
+  r =>
+    (r.investmentType && r.investmentType.trim() !== '') ||
+    Number(r.amount) > 0 ||
+    (r.attachment && r.attachment.trim() !== ''),
+);
+const showBody = expanded && enabled;
+    // const showBody = expanded && (enabled || hasRowData);
     const mergedOptions = [
       ...new Set([
         ...options,
@@ -650,6 +770,7 @@ const DeclareInvestments = ({navigation, route}) => {
             <Switch
               value={enabled}
               onValueChange={val =>
+                
                 setForm(prev => ({
                   ...prev,
                   itDeclaration: {
@@ -810,6 +931,40 @@ const DeclareInvestments = ({navigation, route}) => {
             </View>
           </View>
         )}
+
+        <View style={styles.fyBox}>
+          <Text style={styles.fyBoxLabel}>Financial Year</Text>
+          <View style={styles.fyBoxField}>
+            {/* Year input: user types 4-digit year (e.g. 2026) which maps to full FY 2026-2027 */}
+            <TextInput
+              style={styles.fyInput}
+              placeholder="E.g. 2025-26, 2025-2026, FY2025-26, FY2025-2026"
+              value={fyInput}
+              onChangeText={text => {
+                setFyInput(text);
+                const parsed = parseFinancialYearInput(text);
+                if (parsed) {
+                  // update form with API format (full year)
+                  updateForm({financialYear: parsed});
+                  setFyError('');
+                } else {
+                  setFyError('Accepted formats: 2025-26, 2025-2026, FY2025-26, FY2025-2026');
+                }
+              }}
+              onBlur={() => {
+                const parsed = parseFinancialYearInput(fyInput);
+                if (parsed) {
+                  // normalize display to short form (e.g. 2025-26)
+                  setFyInput(toShortFinancialYear(parsed));
+                  updateForm({financialYear: parsed});
+                  setFyError('');
+                }
+              }}
+            />
+          </View>
+          {fyError ? <Text style={styles.fyError}>{fyError}</Text> : null}
+        </View>
+
         {/* RENTED HOUSE */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -1238,22 +1393,61 @@ const DeclareInvestments = ({navigation, route}) => {
       </ScrollView>
 
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelBtnText}>CANCEL</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.saveBtn}
-          onPress={handleSave}
-          disabled={saving}>
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveBtnText}>
-              {isProof ? 'SUBMIT PROOF' : 'SAVE'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        <View style={styles.bottomBarRow}>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => navigation.goBack()}
+            disabled={saving || savingCompare}>
+            <Text style={styles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              isProof ? styles.compareBtn : styles.saveBtn,
+              (saving || savingCompare || fyError) && styles.btnDisabled,
+            ]}
+            onPress={handleSave}
+            disabled={saving || savingCompare || !!fyError}>
+            {saving ? (
+              <ActivityIndicator
+                color={isProof ? '#fff' : '#2952E3'}
+                size="small"
+              />
+            ) : (
+              <Text style={isProof ? styles.compareBtnText : styles.saveBtnText}>
+                {isProof ? 'Submit Proof' : 'Save'}
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          {!isProof ? (
+            <TouchableOpacity
+              style={[
+                styles.compareBtn,
+                styles.compareBtnWide,
+                (saving || savingCompare || fyError) && styles.btnDisabled,
+              ]}
+              onPress={handleSaveAndCompare}
+              disabled={saving || savingCompare || !!fyError}>
+              {savingCompare ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.compareBtnText}>Save & Compare</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
+
+      <SaveAndCompareModal
+        visible={compareVisible}
+        data={saveAndCompare}
+        selectedTaxRegime={form.taxRegime}
+        onTaxRegimeChange={value => updateForm({taxRegime: value})}
+        onClose={() => setCompareVisible(false)}
+        onSubmit={handleSubmitDeclaration}
+        submitting={saving}
+      />
 
       <Modal visible={picker.visible} transparent animationType="fade">
         <TouchableOpacity
@@ -1346,6 +1540,40 @@ const styles = StyleSheet.create({
   title: {fontSize: 16, fontWeight: '700', color: '#111'},
   subtitle: {fontSize: 11, color: '#6B7280', marginTop: 2},
   scrollArea: {flex: 1, paddingHorizontal: 14, paddingTop: 14},
+  fyBox: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#ECECEC',
+  },
+  fyBoxLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  fyBoxField: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  fyBoxText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  fyInput: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    paddingVertical: 0,
+  },
+  fyError: {color: '#DC2626', marginTop: 6, fontSize: 12},
   card: {
     backgroundColor: '#FFF',
     borderRadius: 12,
@@ -1488,32 +1716,78 @@ const styles = StyleSheet.create({
   addLinkBtn: {paddingVertical: 6, alignSelf: 'flex-start'},
   addLinkText: {color: '#2952E3', fontSize: 13, fontWeight: '600'},
   bottomBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 14,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  bottomBarRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    paddingVertical: 11,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 8,
   },
-  cancelBtnText: {color: '#374151', fontWeight: '700', fontSize: 12},
+  cancelBtnText: {
+    color: '#374151',
+    fontWeight: '700',
+    fontSize: 13,
+  },
   saveBtn: {
     flex: 1,
-    backgroundColor: '#2952E3',
-    borderRadius: 8,
-    paddingVertical: 11,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#2952E3',
+    paddingHorizontal: 8,
   },
-  saveBtnText: {color: '#fff', fontWeight: '700', fontSize: 12},
+  saveBtnText: {
+    color: '#2952E3',
+    fontWeight: '700',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  compareBtn: {
+    flex: 1.15,
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#2952E3',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  compareBtnWide: {
+    flex: 1.25,
+  },
+  compareBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  btnDisabled: {
+    opacity: 0.55,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

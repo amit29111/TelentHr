@@ -217,7 +217,7 @@ const mapPayslip = (item, index) => {
       item.grossPay ?? item.gross_pay ?? item.grossSalary ?? item.gross,
     ),
     grossEarnings: formatCurrency(
-      item.grossPay ?? item.gross_pay ?? item.grossSalary ?? item.gross,
+      item.grossEarnings ?? item.gross_pay ?? item.grossSalary ?? item.gross,
     ),
     deduction: formatCurrency(
       item.deduction ??
@@ -500,8 +500,8 @@ const PayrollSalary = ({navigation, route}) => {
                         <Text style={styles.value}>{item.payPeriod}</Text>
                       </View>
                       <View style={styles.topCol}>
-                        <Text style={styles.label}>Pay Date</Text>
-                        <Text style={styles.value}>{item.payDate}</Text>
+                        <Text style={styles.label}>Hours</Text>
+                        <Text style={styles.value}>{item.workingDays}</Text>
                       </View>
                       <View
                         style={[
@@ -515,17 +515,17 @@ const PayrollSalary = ({navigation, route}) => {
                     </View>
 
                     <View style={styles.bottomRow}>
-                      <View>
+                      {/* <View>
                         <Text style={styles.smallLabel}>Hours</Text>
                         <Text style={styles.smallValue}>{item.workingDays}</Text>
-                      </View>
+                      </View> */}
                       <View>
                         <Text style={styles.smallLabel}>Gross Pay</Text>
-                        <Text style={styles.smallValue}>{item.grossPay}</Text>
+                        <Text style={styles.smallValue}>{item.grossEarnings}</Text>
                       </View>
                       <View>
                         <Text style={styles.smallLabel}>Deduction</Text>
-                        <Text style={styles.smallValue}>{item.deduction}</Text>
+                        <Text style={[styles.smallValue,{ color: '#DC2626' }]}>{item.deduction}</Text>
                       </View>
                       <View>
                         <Text style={styles.smallLabel}>Net Pay</Text>

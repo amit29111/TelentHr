@@ -310,7 +310,7 @@ const mapClaimItem = (item, index) => {
         item.createdAt,
     ),
     importedOn: formatDate(
-      item.importedOn ||
+      item.submittedOn ||
         item.imported_on ||
         item.importedDate ||
         item.imported_date ||
@@ -675,9 +675,12 @@ const PayrollClaims = ({navigation}) => {
                       <Text style={styles.label}>Claim Date</Text>
                       <Text style={styles.value}>{item.claimDate}</Text>
                     </View>
-                    <View style={styles.itemBox}>
+                    <View style={styles.itemBox} >
                       <Text style={styles.label}>Imported On</Text>
-                      <Text style={styles.value}>{item.importedOn}</Text>
+                      <Text  style={[
+    styles.value,
+    { color: 'rgb(22, 163, 74)' }
+  ]}>{item.importedOn}</Text>
                     </View>
                   </View>
                 </View>
