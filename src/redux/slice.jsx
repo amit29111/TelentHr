@@ -326,6 +326,8 @@
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiService from '../api/apiService';
+import apiAuth from '../api/authConfig';
+import { ENDPOINT } from '../api/endpoint';
 
 // --- EXISTING THUNKS ---
 
@@ -333,7 +335,7 @@ export const userLogin = createAsyncThunk(
   'app/login',
   async ({email, password}, {rejectWithValue}) => {
     try {
-      const response = await apiService.logInUser(email, password);
+     const response = await apiService.logInUser(email, password);
       const {
         token,
         permissions,
@@ -372,8 +374,14 @@ export const userLogin = createAsyncThunk(
 
       return {...response, expiresAt};
     } catch (error) {
-      return rejectWithValue(error.message || 'Login failed');
-    }
+  console.log('===== LOGIN ERROR =====');
+  console.log('MESSAGE:', error?.message);
+  console.log('RESPONSE:', error?.response?.data);
+  console.log('STATUS:', error?.response?.status);
+  console.log('FULL ERROR:', JSON.stringify(error, null, 2));
+
+  return rejectWithValue(error.message || 'Login failed');
+}
   },
 );
 

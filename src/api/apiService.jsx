@@ -1,8 +1,11 @@
-import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiAuth from './authConfig';
 import { ENDPOINT } from './endpoint';
 import apiClient from './apiClient';
+import {
+  multipartPutWithFallback,
+  toUploadFilePart,
+} from './multipartUpload';
 
 const handleError = (error) => {
   if (error.response) {
@@ -291,34 +294,46 @@ const apiService = {
   async uploadFile(asset) {
     try {
       const formData = new FormData();
-      const uri =
-        Platform.OS === 'android'
-          ? asset.uri
-          : asset.uri.replace('file://', '');
-      formData.append('file', {
-        uri,
-        type: asset.type || 'image/jpeg',
-        name: asset.fileName || `upload_${Date.now()}.jpg`,
-      });
+      formData.append('file', toUploadFilePart(asset, `upload_${Date.now()}.jpg`));
       const response = await apiClient.post(
         ENDPOINT.PAYROLL.FILE_UPLOAD,
         formData,
-        {headers: {'Content-Type': 'multipart/form-data'}},
       );
       return response.data;
     } catch (error) {
       throw handleError(error);
     }
   },
-  async submitProofOfInvestment(formData) {
+  async submitInvestmentProofAttachment({fieldName, asset, financialYear}) {
     try {
-      const response = await apiClient.put(
-        ENDPOINT.PAYROLL.TDS_PROOF_OF_INVESTMENT,
-        formData,
-        {headers: {'Content-Type': 'multipart/form-data'}},
+      if (!fieldName) {
+        throw {message: 'Invalid upload field.'};
+      }
+      if (!financialYear) {
+        throw {message: 'Financial year is required for upload.'};
+      }
+      if (!asset?.uri) {
+        throw {message: 'Could not read selected file.'};
+      }
+
+      const formData = new FormData();
+      formData.append('financialYear', String(financialYear));
+      formData.append(
+        fieldName,
+        toUploadFilePart(asset, `proof_${Date.now()}.jpg`),
       );
-      return response.data;
+
+      return await multipartPutWithFallback(
+        [
+          ENDPOINT.PAYROLL.SUBMIT_INVESTMENT_PROOF,
+          ENDPOINT.PAYROLL.SUBMIT_INVESTMENT_PROOF_ALT,
+        ],
+        formData,
+      );
     } catch (error) {
+      if (error?.message) {
+        throw {message: error.message, data: error.data, status: error.status};
+      }
       throw handleError(error);
     }
   },

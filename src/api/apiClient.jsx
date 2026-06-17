@@ -18,7 +18,10 @@ apiClient.interceptors.request.use(async (config) => {
   }
   if (orgId) {
     config.headers["org_uuid"] = orgId;
-  } 
+  }
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
   return config;
 });
 

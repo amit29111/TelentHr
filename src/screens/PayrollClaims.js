@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 22,
     marginBottom: 10,
   },
 
@@ -1237,9 +1237,9 @@ const styles = StyleSheet.create({
   },
 
   backIcon: {
-    fontSize: 24,
+    fontSize: 32,
     color: '#111',
-    width: 24,
+    width: 28,
   },
 
   title: {

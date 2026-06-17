@@ -16,7 +16,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import PayrollTabs from './PayrollTabs';
 import apiService from '../api/apiService';
 import {ENDPOINT} from '../api/endpoint';
-import {downloadAuthenticatedFile} from '../utils/payrollDownload';
+import {downloadAuthenticatedFile, viewPayrollFile} from '../utils/payrollDownload';
+import AttachmentPreviewModal from '../components/AttachmentPreviewModal';
 import {
   toApiFinancialYear,
   toShortFinancialYear,
@@ -25,6 +26,8 @@ import {
   sumAmounts,
   declarationHasContent,
   fetchTdsDeclaration,
+  collectProofAttachments,
+  fileNameFromUrl,
 } from './DeclareInvestments';
 
 const extractTaxReport = payload => payload?.data || payload;
@@ -92,6 +95,7 @@ const PayrollTaxation = ({navigation}) => {
   const [form16Loading, setForm16Loading] = useState(false);
   const [form16Refreshing, setForm16Refreshing] = useState(false);
   const [downloadingForm16, setDownloadingForm16] = useState(false);
+  const [previewSource, setPreviewSource] = useState(null);
 
   const showActionButton =
     activeTab === 'Investment Declaration' ||
@@ -166,7 +170,10 @@ const PayrollTaxation = ({navigation}) => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'Investment Declaration') {
+    if (
+      activeTab === 'Investment Declaration' ||
+      activeTab === 'Proof of Investment'
+    ) {
       loadDeclaration(selectedYear);
     } else if (activeTab === 'Tax Report') {
       loadTaxReport(selectedYear);
@@ -177,7 +184,10 @@ const PayrollTaxation = ({navigation}) => {
 
   useEffect(() => {
     const unsub = navigation.addListener('focus', () => {
-      if (activeTab === 'Investment Declaration') {
+      if (
+        activeTab === 'Investment Declaration' ||
+        activeTab === 'Proof of Investment'
+      ) {
         loadDeclaration(selectedYear, true);
       } else if (activeTab === 'Tax Report') {
         loadTaxReport(selectedYear, true);
@@ -216,6 +226,19 @@ const PayrollTaxation = ({navigation}) => {
         financialYear: toApiFinancialYear(selectedYear),
         displayYear: toApiFinancialYear(selectedYear),
       });
+    }
+  };
+
+  const viewProofAttachment = async (url, name) => {
+    if (!url) return;
+    try {
+      await viewPayrollFile({
+        url,
+        fileName: name || fileNameFromUrl(url),
+        onPreview: setPreviewSource,
+      });
+    } catch (error) {
+      Alert.alert('View failed', error?.message || 'Could not open file.');
     }
   };
 
@@ -263,6 +286,101 @@ const PayrollTaxation = ({navigation}) => {
   const total80C = sumAmounts(decl?.investments80C);
   const total80D = sumAmounts(decl?.investments80D);
   const declared = hasDeclarationData(declaration);
+
+  const proofAttachments = collectProofAttachments(decl);
+  const proofStatus = decl?.proofStatus || '';
+  const hasProof = proofAttachments.length > 0 || Boolean(proofStatus);
+
+  const renderProofSummary = () => {
+    if (loading && !refreshing) {
+      return (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color="#2952E3" />
+        </View>
+      );
+    }
+
+    if (!hasProof) {
+      return (
+        <View style={styles.emptyState}>
+          <Feather name="upload-cloud" size={40} color="#C8A8A8" />
+          <Text style={styles.emptyTitle}>No Proof Submitted</Text>
+          <Text style={styles.emptySubtitle}>
+            Tap "Submit Proof" above to upload and review your proof of
+            investments.
+          </Text>
+        </View>
+      );
+    }
+
+    const statusLower = String(proofStatus || '').toLowerCase();
+    const statusStyle =
+      statusLower === 'approved' || statusLower === 'verified'
+        ? styles.proofStatusApproved
+        : statusLower === 'rejected'
+          ? styles.proofStatusRejected
+          : styles.proofStatusPending;
+
+    return (
+      <View>
+        <View style={styles.summaryHeader}>
+          <Feather name="file-text" size={18} color="#2952E3" />
+          <Text style={styles.summaryTitle}>Proof of Investment</Text>
+        </View>
+        <Text style={styles.summaryFy}>
+          Financial Year: {toDisplayFinancialYear(decl?.financialYear) || selectedYear}
+        </Text>
+        {proofStatus ? (
+          <View style={[styles.proofStatusBadge, statusStyle]}>
+            <Text style={styles.proofStatusText}>{proofStatus}</Text>
+          </View>
+        ) : null}
+        {decl?.proofRemarks ? (
+          <Text style={styles.proofRemarks}>Remarks: {decl.proofRemarks}</Text>
+        ) : null}
+
+        {proofAttachments.length > 0 ? (
+          <View style={styles.proofList}>
+            <Text style={styles.proofListTitle}>Uploaded Documents</Text>
+            {proofAttachments.map((item, index) => (
+              <TouchableOpacity
+                key={`${item.label}-${index}`}
+                style={styles.proofListRow}
+                onPress={() =>
+                  viewProofAttachment(item.url, fileNameFromUrl(item.url))
+                }
+                activeOpacity={0.7}>
+                <Feather name="file-text" size={18} color="#2952E3" />
+                <View style={styles.proofListInfo}>
+                  <Text style={styles.proofListLabel}>{item.label}</Text>
+                  <Text style={styles.proofListFileName} numberOfLines={2}>
+                    {fileNameFromUrl(item.url)}
+                  </Text>
+                  <Text style={styles.proofListTapHint}>Tap to view</Text>
+                </View>
+                <View style={styles.proofViewChip}>
+                  <Feather name="eye" size={14} color="#2952E3" />
+                  <Text style={styles.proofViewChipText}>View</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+
+        <TouchableOpacity
+          style={styles.editLink}
+          onPress={() =>
+            navigation.navigate('ProofOfInvestments', {
+              mode: 'proof',
+              financialYear: toApiFinancialYear(selectedYear),
+              displayYear: toApiFinancialYear(selectedYear),
+            })
+          }>
+          <Text style={styles.editLinkText}>Edit / Upload Proof →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderInvestmentSummary = () => {
     if (loading && !refreshing) {
@@ -596,6 +714,7 @@ const PayrollTaxation = ({navigation}) => {
   };
 
   return (
+    <>
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
@@ -686,14 +805,7 @@ const PayrollTaxation = ({navigation}) => {
         {activeTab === 'Investment Declaration' ? (
           renderInvestmentSummary()
         ) : activeTab === 'Proof of Investment' ? (
-          <View style={styles.emptyState}>
-            <Feather name="upload-cloud" size={40} color="#C8A8A8" />
-            <Text style={styles.emptyTitle}>No Proof Submitted</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap "Submit Proof" above to upload and review your proof of
-              investments.
-            </Text>
-          </View>
+          renderProofSummary()
         ) : activeTab === 'Tax Report' ? (
           renderTaxReport()
         ) : activeTab === 'Form 16' ? (
@@ -701,6 +813,12 @@ const PayrollTaxation = ({navigation}) => {
         ) : null}
       </View>
     </ScrollView>
+    <AttachmentPreviewModal
+      visible={Boolean(previewSource)}
+      source={previewSource}
+      onClose={() => setPreviewSource(null)}
+    />
+    </>
   );
 };
 
@@ -713,10 +831,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 28,
     marginBottom: 10,
   },
-  backIcon: {fontSize: 24, color: '#111', width: 24},
+  backIcon: {fontSize: 32, color: '#111', width: 28},
   title: {fontSize: 18, fontWeight: '700', color: '#111'},
   tabsContainer: {paddingHorizontal: 16, marginTop: 10, paddingBottom: 10},
   customTab: {marginRight: 24, alignItems: 'center', paddingBottom: 8},
@@ -936,4 +1054,45 @@ const styles = StyleSheet.create({
   },
   taxSummaryLabel: {fontSize: 12, color: '#6B7280'},
   taxSummaryValue: {fontSize: 12, fontWeight: '600', color: '#111'},
+  proofStatusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  proofStatusApproved: {backgroundColor: '#DCFCE7'},
+  proofStatusRejected: {backgroundColor: '#FEE2E2'},
+  proofStatusPending: {backgroundColor: '#FEF3C7'},
+  proofStatusText: {fontSize: 12, fontWeight: '700', color: '#111'},
+  proofRemarks: {fontSize: 12, color: '#6B7280', marginBottom: 12, lineHeight: 17},
+  proofList: {marginTop: 4, marginBottom: 8},
+  proofListTitle: {fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 10},
+  proofListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#EFF6FF',
+    gap: 10,
+  },
+  proofListInfo: {flex: 1},
+  proofListLabel: {fontSize: 12, fontWeight: '600', color: '#374151'},
+  proofListFileName: {fontSize: 13, fontWeight: '700', color: '#1D4ED8', marginTop: 2},
+  proofListTapHint: {fontSize: 10, color: '#6B7280', marginTop: 2},
+  proofViewChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  proofViewChipText: {fontSize: 12, color: '#2952E3', fontWeight: '700'},
 });

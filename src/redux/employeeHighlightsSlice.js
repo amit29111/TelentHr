@@ -7,7 +7,9 @@ export const fetchEmployeeHighlights = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        'https://hrmsbackend.nagarsoftwaresolution.com/employee/getEmployeeHighlights'
+        // 'https://hrmsbackend.nagarsoftwaresolution.com/employee/getEmployeeHighlights'
+        'https://uat-backend-hrms.ezcompliance.in/employee/getEmployeeHighlights'
+        // 'https://hrmsapi.ezcompliance.in/employee/getEmployeeHighlights'
       );
       return response.data;
     } catch (error) {

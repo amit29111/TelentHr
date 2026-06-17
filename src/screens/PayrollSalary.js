@@ -15,19 +15,22 @@ import PayslipDetailModal from './PayslipDetailModal';
 import apiClient from '../api/apiClient';
 import {ENDPOINT} from '../api/endpoint';
 import {downloadAuthenticatedFile} from '../utils/payrollDownload';
-import {toLongFinancialYear} from '../utils/payrollAnnualStatement';
+import {toLongFinancialYear, resolveAnnualStatementId} from '../utils/payrollAnnualStatement';
 import DownloadIconButton from '../components/DownloadIconButton';
 import ViewIconButton from '../components/ViewIconButton';
 
 const PAYSLIP_YEARS = ['2021', '2022', '2023', '2024', '2025', '2026'];
-const FINANCIAL_YEARS = [
-  '2021-2022',
-  '2022-2023',
-  '2023-2024',
-  '2024-2025',
-  '2025-2026',
-  '2026-2027',
-];
+const ANNUAL_YEARS = PAYSLIP_YEARS;
+
+/** FY label e.g. 2026-2027 or 2026-27 → calendar year for dropdown (2027) */
+const toCalendarYearFromFy = value => {
+  if (!value) return '2026';
+  const s = String(value);
+  if (!s.includes('-')) return s;
+  const long = toLongFinancialYear(s);
+  const m = long.match(/^(\d{4})-(\d{4})$/);
+  return m ? m[2] : s;
+};
 
 /** Calendar year dropdown → FY string for API e.g. 2026 → 2025-2026 */
 const toFinancialYearParam = value => {
@@ -170,7 +173,35 @@ const extractPayslipList = payload => {
   return [];
 };
 
-const extractAnnualStatements = payload => extractArray(payload).filter(item => item && typeof item === 'object');
+const extractAnnualStatements = payload => {
+  const list = extractArray(payload).filter(item => item && typeof item === 'object');
+  if (list.length) return list;
+
+  const root = payload?.data ?? payload;
+  if (root && typeof root === 'object' && !Array.isArray(root)) {
+    if (
+      root.payrollId ||
+      root.payslipId ||
+      root.payslip_id ||
+      root.statementId ||
+      root._id ||
+      root.financialYear ||
+      root.financial_year
+    ) {
+      return [root];
+    }
+  }
+  return [];
+};
+
+const getAnnualDownloadId = item =>
+  item?.payrollId ||
+  item?.payslipId ||
+  item?.payslip_id ||
+  item?.statementId ||
+  item?.id ||
+  item?._id ||
+  '';
 
 const formatCurrency = value => {
   const num = Number(value);
@@ -241,16 +272,21 @@ const mapPayslip = (item, index) => {
   };
 };
 
-const mapAnnualStatement = (item, index, financialYear) => ({
-  id: item._id || item.id || item.statementId || String(index),
-  label:
+const mapAnnualStatement = (item, index, calendarYear) => {
+  const downloadId = getAnnualDownloadId(item);
+  const fyLabel =
     item.financialYear ||
     item.financial_year ||
     item.fy ||
     item.title ||
-    `FY ${financialYear}`,
-  raw: item,
-});
+    `FY ${toFinancialYearParam(calendarYear)}`;
+  return {
+    id: downloadId || String(index),
+    downloadId,
+    label: fyLabel,
+    raw: item,
+  };
+};
 
 const downloadSalaryPdf = async payslipId =>
   downloadAuthenticatedFile({
@@ -264,7 +300,7 @@ const PayrollSalary = ({navigation, route}) => {
   const [showAnnualYearDropdown, setShowAnnualYearDropdown] = useState(false);
   const [selectedPayslipYear, setSelectedPayslipYear] = useState('2026');
   const [selectedAnnualYear, setSelectedAnnualYear] = useState(
-    initialAnnualYear ? toLongFinancialYear(initialAnnualYear) : '2026-2027',
+    initialAnnualYear ? toCalendarYearFromFy(initialAnnualYear) : '2026',
   );
   const [loadedPayslipYear, setLoadedPayslipYear] = useState('');
   const [loadedAnnualYear, setLoadedAnnualYear] = useState('');
@@ -309,34 +345,39 @@ const PayrollSalary = ({navigation, route}) => {
     }
   }, []);
 
-  const fetchAnnualStatements = useCallback(async (financialYear, silent = false) => {
-    if (!financialYear) return;
+  const fetchAnnualStatements = useCallback(async (calendarYear, silent = false) => {
+    if (!calendarYear) return;
     setLoadingAnnual(true);
     setLoadedAnnualYear('');
     setAnnualStatements([]);
     let lastError = null;
+    let loaded = false;
     try {
-      for (const fy of fyQueryVariants(financialYear)) {
+      for (const fy of fyQueryVariants(calendarYear)) {
         try {
           const res = await apiClient.get(
             ENDPOINT.PAYROLL.ANNUAL_SALARY_STATEMENT(fy),
           );
           const rawList = extractAnnualStatements(res?.data ?? {});
-          const list = filterAnnualByFinancialYear(rawList, financialYear);
-          setAnnualStatements(
-            list.map((item, idx) => mapAnnualStatement(item, idx, financialYear)),
+          const list = filterAnnualByFinancialYear(rawList, calendarYear);
+          const mapped = list.map((item, idx) =>
+            mapAnnualStatement(item, idx, calendarYear),
           );
-          setLoadedAnnualYear(financialYear);
-          lastError = null;
-          break;
+          if (mapped.length) {
+            setAnnualStatements(mapped);
+            setLoadedAnnualYear(calendarYear);
+            loaded = true;
+            lastError = null;
+            break;
+          }
         } catch (error) {
           lastError = error;
         }
       }
-      if (lastError) {
+      if (!loaded) {
         setAnnualStatements([]);
-        setLoadedAnnualYear(financialYear);
-        if (!silent) {
+        setLoadedAnnualYear(calendarYear);
+        if (lastError && !silent) {
           Alert.alert('Error', getErrorMessage(lastError));
         }
       }
@@ -370,9 +411,9 @@ const PayrollSalary = ({navigation, route}) => {
 
   useEffect(() => {
     if (!initialAnnualYear) return;
-    const fy = toLongFinancialYear(initialAnnualYear);
-    setSelectedAnnualYear(fy);
-    fetchAnnualStatements(fy);
+    const year = toCalendarYearFromFy(initialAnnualYear);
+    setSelectedAnnualYear(year);
+    fetchAnnualStatements(year);
     navigation.setParams({initialAnnualYear: undefined});
   }, [initialAnnualYear, fetchAnnualStatements, navigation]);
 
@@ -393,15 +434,28 @@ const PayrollSalary = ({navigation, route}) => {
     setPayslipModalVisible(true);
   };
 
-  const handleDownloadAnnual = async statementId => {
-    if (!statementId) {
-      Alert.alert('Error', 'Statement ID not found.');
+  const handleDownloadAnnual = async statement => {
+    let downloadId =
+      statement?.downloadId ||
+      statement?.id ||
+      getAnnualDownloadId(statement?.raw);
+
+    if (!downloadId) {
+      try {
+        downloadId = await resolveAnnualStatementId(selectedAnnualYear);
+      } catch (_) {
+        downloadId = null;
+      }
+    }
+
+    if (!downloadId) {
+      Alert.alert('Error', 'Statement ID not found for download.');
       return;
     }
 
-    setDownloadingId(statementId);
+    setDownloadingId(downloadId);
     try {
-      await downloadSalaryPdf(statementId);
+      await downloadSalaryPdf(downloadId);
     } catch (error) {
       Alert.alert(
         'Download failed',
@@ -451,26 +505,27 @@ const PayrollSalary = ({navigation, route}) => {
 
         <PayrollTabs navigation={navigation} activeTab="Salary" />
 
-        <View style={styles.yearContainer}>
+        <View style={[styles.yearContainer, showPayslipYearDropdown && styles.yearContainerOpen]}>
           <TouchableOpacity
             style={styles.yearDropdown}
-            onPress={() => setShowPayslipYearDropdown(!showPayslipYearDropdown)}>
+            onPress={() => {
+              setShowPayslipYearDropdown(prev => !prev);
+              setShowAnnualYearDropdown(false);
+            }}>
             <Text style={styles.yearText}>Year : {selectedPayslipYear}</Text>
             <Text style={styles.arrow}>{showPayslipYearDropdown ? '▲' : '▼'}</Text>
           </TouchableOpacity>
 
           {showPayslipYearDropdown && (
             <View style={styles.dropdownBox}>
-              <ScrollView nestedScrollEnabled style={styles.dropdownScroll}>
-                {PAYSLIP_YEARS.map(year => (
-                  <TouchableOpacity
-                    key={year}
-                    style={styles.dropdownItem}
-                    onPress={() => handlePayslipYearSelect(year)}>
-                    <Text style={styles.dropdownText}>{year}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              {PAYSLIP_YEARS.map(year => (
+                <TouchableOpacity
+                  key={year}
+                  style={styles.dropdownItem}
+                  onPress={() => handlePayslipYearSelect(year)}>
+                  <Text style={styles.dropdownText}>{year}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
         </View>
@@ -545,28 +600,33 @@ const PayrollSalary = ({navigation, route}) => {
             )}
 
             <Text style={styles.sectionTitle}>Annual Salary Statement</Text>
-            <View style={styles.annualYearContainer}>
+            <View
+              style={[
+                styles.annualYearContainer,
+                showAnnualYearDropdown && styles.annualYearContainerOpen,
+              ]}>
               <TouchableOpacity
                 style={styles.yearDropdownCompact}
-                onPress={() => setShowAnnualYearDropdown(!showAnnualYearDropdown)}>
+                onPress={() => {
+                  setShowAnnualYearDropdown(prev => !prev);
+                  setShowPayslipYearDropdown(false);
+                }}>
                 <Text style={styles.yearText} numberOfLines={1}>
-                  FY : {selectedAnnualYear}
+                  Year : {selectedAnnualYear}
                 </Text>
                 <Text style={styles.arrow}>{showAnnualYearDropdown ? '▲' : '▼'}</Text>
               </TouchableOpacity>
 
               {showAnnualYearDropdown && (
-                <View style={styles.dropdownBoxCompact}>
-                  <ScrollView nestedScrollEnabled style={styles.dropdownScroll}>
-                    {FINANCIAL_YEARS.map(year => (
-                      <TouchableOpacity
-                        key={year}
-                        style={styles.dropdownItem}
-                        onPress={() => handleAnnualYearSelect(year)}>
-                        <Text style={styles.dropdownText}>{year}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                <View style={styles.dropdownBoxUp}>
+                  {ANNUAL_YEARS.map(year => (
+                    <TouchableOpacity
+                      key={year}
+                      style={styles.dropdownItem}
+                      onPress={() => handleAnnualYearSelect(year)}>
+                      <Text style={styles.dropdownText}>{year}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
             </View>
@@ -576,7 +636,7 @@ const PayrollSalary = ({navigation, route}) => {
             ) : showAnnualContent && annualStatements.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>
-                  No record found for financial year {selectedAnnualYear}
+                  No record found for year {selectedAnnualYear}
                 </Text>
               </View>
             ) : showAnnualContent ? (
@@ -585,8 +645,8 @@ const PayrollSalary = ({navigation, route}) => {
                   <Text style={styles.statementText}>{item.label}</Text>
                   <DownloadIconButton
                     backgroundColor="#2952E3"
-                    loading={downloadingId === item.id}
-                    onPress={() => handleDownloadAnnual(item.id)}
+                    loading={downloadingId === (item.downloadId || item.id)}
+                    onPress={() => handleDownloadAnnual(item)}
                   />
                 </View>
               ))
@@ -622,13 +682,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 18,
+    paddingTop: 16,
     marginBottom: 10,
   },
   backIcon: {
-    fontSize: 24,
+    fontSize: 40,
     color: '#111',
-    width: 24,
+    width: 28,
   },
   headerTitle: {
     fontSize: 18,
@@ -639,15 +699,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 6,
     marginBottom: 16,
-    zIndex: 999,
+    zIndex: 20,
     alignSelf: 'flex-start',
     maxWidth: '55%',
   },
+  yearContainerOpen: {
+    zIndex: 1000,
+    elevation: 12,
+  },
   annualYearContainer: {
     marginBottom: 12,
-    zIndex: 999,
+    zIndex: 20,
     alignSelf: 'flex-start',
     maxWidth: '62%',
+  },
+  annualYearContainerOpen: {
+    zIndex: 1000,
+    elevation: 12,
   },
   yearDropdown: {
     backgroundColor: '#fff',
@@ -686,34 +754,39 @@ const styles = StyleSheet.create({
   },
   dropdownBox: {
     position: 'absolute',
-    top: 40,
+    top: 42,
     left: 0,
     right: 0,
     backgroundColor: '#fff',
     borderRadius: 8,
-    elevation: 10,
-    zIndex: 9999,
+    elevation: 12,
+    zIndex: 1001,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
-  dropdownBoxCompact: {
+  dropdownBoxUp: {
     position: 'absolute',
-    top: 40,
+    bottom: 44,
     left: 0,
     right: 0,
     backgroundColor: '#fff',
     borderRadius: 8,
-    elevation: 10,
-    zIndex: 9999,
+    elevation: 12,
+    zIndex: 1001,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-  },
-  dropdownScroll: {
-    maxHeight: 130,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
   },
   dropdownItem: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     borderBottomWidth: 0.5,
     borderBottomColor: '#EEE',
   },
@@ -725,6 +798,7 @@ const styles = StyleSheet.create({
   contentSection: {
     paddingHorizontal: 16,
     paddingBottom: 30,
+    overflow: 'visible',
   },
   sectionTitle: {
     fontSize: 15,

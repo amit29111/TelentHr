@@ -46,10 +46,21 @@ export const resolveAnnualStatementId = async financialYear => {
       );
       const list = extractAnnualList(res?.data ?? {});
       const first = list.find(
-        item => item?._id || item?.id || item?.statementId,
+        item =>
+          item?._id ||
+          item?.id ||
+          item?.statementId ||
+          item?.payrollId ||
+          item?.payslipId,
       );
       if (first) {
-        return first._id || first.id || first.statementId;
+        return (
+          first.payrollId ||
+          first.payslipId ||
+          first._id ||
+          first.id ||
+          first.statementId
+        );
       }
     } catch (_) {
       // try next FY format

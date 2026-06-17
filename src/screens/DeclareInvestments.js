@@ -25,6 +25,18 @@ import apiService from '../api/apiService';
 import SaveAndCompareModal, {
   extractSaveAndCompare,
 } from '../components/SaveAndCompareModal';
+import {viewPayrollFile} from '../utils/payrollDownload';
+import AttachmentPreviewModal from '../components/AttachmentPreviewModal';
+
+const PROOF_ATTACHMENT_FIELDS = {
+  investment80C: 'investment80CAttachments',
+  investment80D: 'investment80DAttachments',
+  rent: 'rentAttachments',
+  homeLoan: 'homeLoanAttachment',
+  letOut: 'letOutPropertyAttachment',
+  otherInvestment: 'otherInvestmentAttachments',
+  otherIncome: 'otherIncomeAttachment',
+};
 
 const INVESTMENT_80C_OPTIONS = [
   'PPF',
@@ -218,12 +230,32 @@ const fileNameFromUrl = url => {
 
 const resolveUploadUrl = res => {
   const data = res?.data || res;
+  if (typeof data === 'string') return data;
+  const attachmentKeys = [
+    'investment80CAttachments',
+    'investment80DAttachments',
+    'rentAttachments',
+    'homeLoanAttachment',
+    'letOutPropertyAttachment',
+    'otherInvestmentAttachments',
+    'otherIncomeAttachment',
+    'attachment',
+  ];
+  for (const key of attachmentKeys) {
+    const value = data?.[key];
+    if (typeof value === 'string' && value) return value;
+    if (Array.isArray(value) && value.length) {
+      const last = value[value.length - 1];
+      if (typeof last === 'string') return last;
+      if (last?.url) return last.url;
+    }
+  }
   return (
     data?.url ||
     data?.fileUrl ||
     data?.location ||
     data?.path ||
-    (typeof data === 'string' ? data : '')
+    ''
   );
 };
 
@@ -307,34 +339,10 @@ const mapFromApi = (raw, apiFy) => {
       ? it.rentEntries
       : [defaultRentEntry()];
   const home = it.homeLoanSelfOccupied || {};
-  const hasRentData = rentList.some(hasRentEntryData);
   const investments80C = mapInvestmentRows(d.investments80C);
   const investments80D = mapInvestmentRows(d.investments80D);
   const investmentsOther = mapInvestmentRows(it.investmentsOther);
-  const has80CData = investments80C.some(
-    r => r.investmentType || Number(r.amount) || r.attachment,
-  );
-  const has80DData = investments80D.some(
-    r => r.investmentType || Number(r.amount) || r.attachment,
-  );
-  const hasOtherData = investmentsOther.some(
-    r => r.investmentType || Number(r.amount) || r.attachment,
-  );
-  const hasHomeLoanData = Boolean(
-    home.enabled ||
-      Number(home.principalPaid) ||
-      Number(home.interestPaid) ||
-      home.lenderName ||
-      home.attachment,
-  );
   const income = it.otherIncomeBreakdown || {};
-  const hasOtherIncomeData = Boolean(
-    Number(income.incomeFromOtherSources) ||
-      Number(income.interestSavings) ||
-      Number(income.interestFD) ||
-      Number(income.interestNSC) ||
-      income.attachment,
-  );
 
   return {
     financialYear: d.financialYear || toApiFinancialYear(apiFy) || '',
@@ -347,7 +355,7 @@ const mapFromApi = (raw, apiFy) => {
     investments80C,
     investments80D,
     itDeclaration: {
-      stayingInRentedHouse: Boolean(it.stayingInRentedHouse) || hasRentData,
+      stayingInRentedHouse: Boolean(it.stayingInRentedHouse),
       rentEntries: rentList.map(r => ({
         fromDate: r.fromDate || '',
         toDate: r.toDate || '',
@@ -361,7 +369,7 @@ const mapFromApi = (raw, apiFy) => {
         attachmentFileName: r.attachment ? fileNameFromUrl(r.attachment) : '',
       })),
       homeLoanSelfOccupied: {
-        enabled: hasHomeLoanData,
+        enabled: Boolean(home.enabled),
         principalPaid: home.principalPaid != null ? String(home.principalPaid) : '',
         interestPaid: home.interestPaid != null ? String(home.interestPaid) : '',
         lenderName: home.lenderName || '',
@@ -369,8 +377,7 @@ const mapFromApi = (raw, apiFy) => {
         attachment: home.attachment || '',
         attachmentFileName: home.attachment ? fileNameFromUrl(home.attachment) : '',
       },
-      letOutPropertyEnabled:
-        Boolean(it.letOutPropertyEnabled) || Boolean(it.letOutPropertyAttachment),
+      letOutPropertyEnabled: Boolean(it.letOutPropertyEnabled),
       letOutPropertyAttachment: it.letOutPropertyAttachment || '',
       letOutPropertyFileName: it.letOutPropertyAttachment
         ? String(it.letOutPropertyAttachment).split('/').pop()
@@ -389,9 +396,9 @@ const mapFromApi = (raw, apiFy) => {
         attachmentFileName: income.attachment ? fileNameFromUrl(income.attachment) : '',
       },
       toggles: {
-        section80C: Boolean(it.toggles?.section80C) || has80CData,
-        section80D: Boolean(it.toggles?.section80D) || has80DData,
-        otherInvestments: Boolean(it.toggles?.otherInvestments) || hasOtherData,
+        section80C: Boolean(it.toggles?.section80C),
+        section80D: Boolean(it.toggles?.section80D),
+        otherInvestments: Boolean(it.toggles?.otherInvestments),
       },
     },
     declaredDeductions: {
@@ -495,7 +502,8 @@ const DeclareInvestments = ({navigation, route}) => {
   const [savingCompare, setSavingCompare] = useState(false);
   const [compareVisible, setCompareVisible] = useState(false);
   const [saveAndCompare, setSaveAndCompare] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingKey, setUploadingKey] = useState(null);
+  const [previewSource, setPreviewSource] = useState(null);
   const [expanded80C, setExpanded80C] = useState(true);
   const [expanded80D, setExpanded80D] = useState(true);
   const [expandedOther, setExpandedOther] = useState(true);
@@ -586,56 +594,133 @@ const DeclareInvestments = ({navigation, route}) => {
     setIosDate({visible: true, rentIdx, field, value: initial});
   };
 
-  const pickAttachment = onUploaded => {
+  const viewAttachment = async (url, name) => {
+    if (!url) return;
+    try {
+      await viewPayrollFile({
+        url,
+        fileName: name || fileNameFromUrl(url),
+        onPreview: setPreviewSource,
+      });
+    } catch (error) {
+      Alert.alert('View failed', error?.message || 'Could not open file.');
+    }
+  };
+
+  const pickProofAttachment = (proofField, onUploaded, uploadKey) => {
     launchImageLibrary({mediaType: 'mixed', selectionLimit: 1}, async response => {
       if (response.didCancel || !response.assets?.length) return;
       const asset = response.assets[0];
-      setUploading(true);
+      const fieldName = PROOF_ATTACHMENT_FIELDS[proofField];
+      const activeKey = uploadKey || proofField;
+      if (!fieldName) {
+        Alert.alert('Upload failed', 'Invalid proof field.');
+        return;
+      }
+
+      const fy =
+        toShortFinancialYear(form.financialYear || apiFinancialYear) ||
+        toShortFinancialYear(fyInput) ||
+        toShortFinancialYear(apiFinancialYear);
+      if (!fy) {
+        Alert.alert(
+          'Financial Year required',
+          'Please enter a valid financial year (e.g. 2026-27) before uploading.',
+        );
+        return;
+      }
+
+      setUploadingKey(activeKey);
       try {
-        const res = await apiService.uploadFile(asset);
+        const res = await apiService.submitInvestmentProofAttachment({
+          fieldName,
+          asset,
+          financialYear: fy,
+        });
         const url = resolveUploadUrl(res);
         if (!url) {
-          Alert.alert('Upload failed', 'Could not get file URL from server.');
+          Alert.alert(
+            'Upload failed',
+            res?.message || 'Could not get file URL from server.',
+          );
           return;
         }
-        onUploaded(url, asset.fileName || fileNameFromUrl(url));
+        const uploadedName =
+          asset.fileName ||
+          fileNameFromUrl(url) ||
+          fileNameFromUrl(asset.uri);
+        onUploaded(url, uploadedName);
       } catch (error) {
-        Alert.alert('Upload failed', error?.message || 'Please try again.');
+        Alert.alert(
+          'Upload failed',
+          error?.message || error?.data?.message || 'Please try again.',
+        );
       } finally {
-        setUploading(false);
+        setUploadingKey(null);
       }
     });
   };
 
   const pickLetOutFile = () => {
-    pickAttachment((url, name) => {
-      updateIt({
-        letOutPropertyAttachment: url,
-        letOutPropertyFileName: name,
-      });
-    });
+    pickProofAttachment(
+      'letOut',
+      (url, name) => {
+        updateIt({
+          letOutPropertyAttachment: url,
+          letOutPropertyFileName: name,
+        });
+      },
+      'letOut',
+    );
   };
 
-  const AttachmentField = ({label, fileName, onPick}) => (
-    <View style={styles.uploadBlock}>
-      <Text style={styles.fieldLabel}>{label || 'Upload Supporting Document'}</Text>
-      <TouchableOpacity
-        style={styles.fileBox}
-        onPress={onPick}
-        disabled={uploading}>
-        {uploading ? (
-          <ActivityIndicator color="#2952E3" />
-        ) : (
-          <>
-            <Feather name="upload-cloud" size={20} color="#6B7280" />
-            <Text style={styles.fileBoxText} numberOfLines={2}>
-              {fileName || 'Choose File'}
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </View>
-  );
+  const AttachmentField = ({label, fileName, attachmentUrl, onPick, uploadKey}) => {
+    const isUploading = uploadingKey === uploadKey;
+    const displayName =
+      fileName ||
+      (attachmentUrl ? fileNameFromUrl(attachmentUrl) : '') ||
+      '';
+    const hasUploadedFile = Boolean(attachmentUrl);
+
+    return (
+      <View style={styles.uploadBlock}>
+        <Text style={styles.fieldLabel}>{label || 'Upload Supporting Document'}</Text>
+        <TouchableOpacity
+          style={styles.fileBox}
+          onPress={onPick}
+          disabled={isUploading}>
+          {isUploading ? (
+            <ActivityIndicator color="#2952E3" />
+          ) : (
+            <>
+              <Feather name="upload-cloud" size={20} color="#6B7280" />
+              <Text style={styles.fileBoxText}>
+                {hasUploadedFile ? 'Change File' : 'Choose File'}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+        {hasUploadedFile ? (
+          <TouchableOpacity
+            style={styles.uploadedFileRow}
+            onPress={() => viewAttachment(attachmentUrl, displayName)}
+            activeOpacity={0.7}>
+            <Feather name="file-text" size={18} color="#2952E3" />
+            <View style={styles.uploadedFileInfo}>
+              <Text style={styles.uploadedFileLabel}>Uploaded file</Text>
+              <Text style={styles.uploadedFileName} numberOfLines={2}>
+                {displayName}
+              </Text>
+            </View>
+            <View style={styles.viewFileChip}>
+              <Feather name="eye" size={14} color="#2952E3" />
+              <Text style={styles.viewFileChipText}>View</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  };
 
   const handleSave = async () => {
     if (fyError) {
@@ -836,20 +921,30 @@ const showBody = expanded && enabled;
                 {isProof && (
                   <AttachmentField
                     label="Upload Proof"
+                    uploadKey={`${toggleKey}-${idx}`}
                     fileName={
                       row.attachmentFileName ||
                       (row.attachment ? fileNameFromUrl(row.attachment) : '')
                     }
+                    attachmentUrl={row.attachment}
                     onPick={() =>
-                      pickAttachment((url, name) => {
-                        const next = [...rows];
-                        next[idx] = {
-                          ...next[idx],
-                          attachment: url,
-                          attachmentFileName: name,
-                        };
-                        setRows(next);
-                      })
+                      pickProofAttachment(
+                        toggleKey === 'section80C'
+                          ? 'investment80C'
+                          : toggleKey === 'section80D'
+                            ? 'investment80D'
+                            : 'otherInvestment',
+                        (url, name) => {
+                          const next = [...rows];
+                          next[idx] = {
+                            ...next[idx],
+                            attachment: url,
+                            attachmentFileName: name,
+                          };
+                          setRows(next);
+                        },
+                        `${toggleKey}-${idx}`,
+                      )
                     }
                   />
                 )}
@@ -1082,20 +1177,26 @@ const showBody = expanded && enabled;
                 </View>
                 {isProof && (
                   <AttachmentField
+                    uploadKey={`rent-${idx}`}
                     fileName={
                       rent.attachmentFileName ||
                       (rent.attachment ? fileNameFromUrl(rent.attachment) : '')
                     }
+                    attachmentUrl={rent.attachment}
                     onPick={() =>
-                      pickAttachment((url, name) => {
-                        const entries = [...it.rentEntries];
-                        entries[idx] = {
-                          ...entries[idx],
-                          attachment: url,
-                          attachmentFileName: name,
-                        };
-                        updateIt({rentEntries: entries});
-                      })
+                      pickProofAttachment(
+                        'rent',
+                        (url, name) => {
+                          const entries = [...it.rentEntries];
+                          entries[idx] = {
+                            ...entries[idx],
+                            attachment: url,
+                            attachmentFileName: name,
+                          };
+                          updateIt({rentEntries: entries});
+                        },
+                        `rent-${idx}`,
+                      )
                     }
                   />
                 )}
@@ -1212,22 +1313,28 @@ const showBody = expanded && enabled;
               />
               {isProof && (
                 <AttachmentField
+                  uploadKey="homeLoan"
                   fileName={
                     it.homeLoanSelfOccupied.attachmentFileName ||
                     (it.homeLoanSelfOccupied.attachment
                       ? fileNameFromUrl(it.homeLoanSelfOccupied.attachment)
                       : '')
                   }
+                  attachmentUrl={it.homeLoanSelfOccupied.attachment}
                   onPick={() =>
-                    pickAttachment((url, name) => {
-                      updateIt({
-                        homeLoanSelfOccupied: {
-                          ...it.homeLoanSelfOccupied,
-                          attachment: url,
-                          attachmentFileName: name,
-                        },
-                      });
-                    })
+                    pickProofAttachment(
+                      'homeLoan',
+                      (url, name) => {
+                        updateIt({
+                          homeLoanSelfOccupied: {
+                            ...it.homeLoanSelfOccupied,
+                            attachment: url,
+                            attachmentFileName: name,
+                          },
+                        });
+                      },
+                      'homeLoan',
+                    )
                   }
                 />
               )}
@@ -1251,7 +1358,14 @@ const showBody = expanded && enabled;
           {it.letOutPropertyEnabled && (
             <View style={styles.cardBody}>
               <AttachmentField
-                fileName={it.letOutPropertyFileName || 'Choose File'}
+                uploadKey="letOut"
+                fileName={
+                  it.letOutPropertyFileName ||
+                  (it.letOutPropertyAttachment
+                    ? fileNameFromUrl(it.letOutPropertyAttachment)
+                    : '')
+                }
+                attachmentUrl={it.letOutPropertyAttachment}
                 onPick={pickLetOutFile}
               />
             </View>
@@ -1339,22 +1453,28 @@ const showBody = expanded && enabled;
               ))}
               {isProof && (
                 <AttachmentField
+                  uploadKey="otherIncome"
                   fileName={
                     it.otherIncomeBreakdown.attachmentFileName ||
                     (it.otherIncomeBreakdown.attachment
                       ? fileNameFromUrl(it.otherIncomeBreakdown.attachment)
                       : '')
                   }
+                  attachmentUrl={it.otherIncomeBreakdown.attachment}
                   onPick={() =>
-                    pickAttachment((url, name) => {
-                      updateIt({
-                        otherIncomeBreakdown: {
-                          ...it.otherIncomeBreakdown,
-                          attachment: url,
-                          attachmentFileName: name,
-                        },
-                      });
-                    })
+                    pickProofAttachment(
+                      'otherIncome',
+                      (url, name) => {
+                        updateIt({
+                          otherIncomeBreakdown: {
+                            ...it.otherIncomeBreakdown,
+                            attachment: url,
+                            attachmentFileName: name,
+                          },
+                        });
+                      },
+                      'otherIncome',
+                    )
                   }
                 />
               )}
@@ -1503,8 +1623,66 @@ const showBody = expanded && enabled;
           </View>
         </Modal>
       )}
+
+      <AttachmentPreviewModal
+        visible={Boolean(previewSource)}
+        source={previewSource}
+        onClose={() => setPreviewSource(null)}
+      />
     </SafeAreaView>
   );
+};
+
+const collectProofAttachments = decl => {
+  if (!decl) return [];
+  const items = [];
+  const it = decl.itDeclaration || {};
+
+  (decl.investments80C || []).forEach((row, idx) => {
+    if (row?.attachment) {
+      items.push({
+        label: `80C — ${row.investmentType || `Item ${idx + 1}`}`,
+        url: row.attachment,
+      });
+    }
+  });
+  (decl.investments80D || []).forEach((row, idx) => {
+    if (row?.attachment) {
+      items.push({
+        label: `80D — ${row.investmentType || `Item ${idx + 1}`}`,
+        url: row.attachment,
+      });
+    }
+  });
+  (it.rentEntries || []).forEach((row, idx) => {
+    if (row?.attachment) {
+      items.push({label: `Rent — Entry ${idx + 1}`, url: row.attachment});
+    }
+  });
+  if (it.homeLoanSelfOccupied?.attachment) {
+    items.push({
+      label: 'Home Loan',
+      url: it.homeLoanSelfOccupied.attachment,
+    });
+  }
+  if (it.letOutPropertyAttachment) {
+    items.push({label: 'Let Out Property', url: it.letOutPropertyAttachment});
+  }
+  (it.investmentsOther || []).forEach((row, idx) => {
+    if (row?.attachment) {
+      items.push({
+        label: `Other — ${row.investmentType || `Item ${idx + 1}`}`,
+        url: row.attachment,
+      });
+    }
+  });
+  if (it.otherIncomeBreakdown?.attachment) {
+    items.push({
+      label: 'Other Income',
+      url: it.otherIncomeBreakdown.attachment,
+    });
+  }
+  return items;
 };
 
 export default DeclareInvestments;
@@ -1519,6 +1697,8 @@ export {
   mapFromApi,
   formatDisplayDate,
   buildPayload,
+  fileNameFromUrl,
+  collectProofAttachments,
 };
 
 const styles = StyleSheet.create({
@@ -1703,6 +1883,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   uploadBlock: {marginTop: 4, marginBottom: 8},
+  uploadedFileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    gap: 10,
+  },
+  uploadedFileInfo: {flex: 1},
+  uploadedFileLabel: {fontSize: 10, color: '#6B7280', fontWeight: '600', marginBottom: 2},
+  uploadedFileName: {fontSize: 13, color: '#1D4ED8', fontWeight: '600'},
+  viewFileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  viewFileChipText: {fontSize: 12, color: '#2952E3', fontWeight: '700'},
   proofBanner: {
     flexDirection: 'row',
     alignItems: 'center',

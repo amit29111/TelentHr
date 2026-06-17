@@ -283,12 +283,15 @@ const PayrollRequests = ({navigation}) => {
                 <View style={styles.inlineRow}>
                   <Text style={styles.radioTextInline}>I would like to contribute</Text>
                   <TextInput
-                    style={styles.inlineInput}
-                    value={percentageValue}
-                    onChangeText={setPercentageValue}
-                    keyboardType="numeric"
-                    placeholder="%"
-                  />
+  style={styles.inlineInput}
+  value={percentageValue}
+  onChangeText={setPercentageValue}
+  keyboardType="numeric"
+  placeholder="%"
+  multiline={false}
+  scrollEnabled={false}
+  numberOfLines={1}
+/>
                   <Text style={styles.radioTextInline}>of my basic salary per month</Text>
                 </View>
                 <Text style={styles.radioText}>towards Voluntary Provident Fund</Text>
@@ -304,13 +307,16 @@ const PayrollRequests = ({navigation}) => {
                   I would like to contribute a fixed amount of Rs.
                 </Text>
                 <View style={[styles.inlineRow, {marginTop: 6}]}>
-                  <TextInput
-                    style={styles.inlineInputWide}
-                    value={fixedAmount}
-                    onChangeText={setFixedAmount}
-                    keyboardType="numeric"
-                    placeholder="Amount"
-                  />
+                <TextInput
+  style={styles.inlineInputWide}
+  value={fixedAmount}
+  onChangeText={setFixedAmount}
+  keyboardType="numeric"
+  placeholder="Amount"
+  multiline={false}
+  scrollEnabled={false}
+  numberOfLines={1}
+/>
                   <Text style={styles.radioTextInline}>per month towards VPF</Text>
                 </View>
               </View>
@@ -360,9 +366,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   backIcon: {
-    fontSize: 24,
+    fontSize: 40,
     color: '#111',
-    width: 24,
+    width: 28,
   },
   title: {
     fontSize: 18,
@@ -606,7 +612,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 6,
     paddingHorizontal: 8,
     backgroundColor: '#fff',
+  
+    // textAlign: 'center',
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
+  
   inlineInputWide: {
     width: 120,
     height: 34,
@@ -616,6 +628,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
     paddingHorizontal: 8,
     backgroundColor: '#fff',
+  
+    // textAlign: 'center',
+    textAlignVertical: 'center',
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
   checkboxRow: {
     flexDirection: 'row',

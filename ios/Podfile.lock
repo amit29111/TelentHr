@@ -1716,7 +1716,7 @@ PODS:
     - Yoga
   - RNFS (2.20.0):
     - React-Core
-  - RNGestureHandler (2.27.1):
+  - RNGestureHandler (2.20.2):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -1965,6 +1965,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNVectorIcons (10.3.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - SocketRocket (0.7.1)
   - Yoga (0.0.0)
 
@@ -2048,6 +2069,7 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
+  - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -2210,6 +2232,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNSVG:
     :path: "../node_modules/react-native-svg"
+  RNVectorIcons:
+    :path: "../node_modules/react-native-vector-icons"
   Yoga:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
@@ -2286,11 +2310,12 @@ SPEC CHECKSUMS:
   RNCAsyncStorage: 87a74d13ba0128f853817e45e21c4051e1f2cd45
   RNDateTimePicker: 2311ad84fa0fae431b8a2c0cb8d5a545286cc575
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
-  RNGestureHandler: 3825ba427c829b7c1b125639a5ea844b2db5faeb
+  RNGestureHandler: fffddeb8af59709c6d8de11b6461a6af63cad532
   RNPermissions: 0096ccc587acab4af692161861e04a0a7e410c25
   RNReanimated: 6b9d5b5919acb1900ce0d36ef95906026c517674
   RNScreens: da08089f1b06c3e0a459545ee2e0eb94ea18a80b
   RNSVG: 43aff28bae846abe9c45625fe8b4816b7ac73ffd
+  RNVectorIcons: c95fdae217b0ed388f2b4d7ed7a4edc457c1df47
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
