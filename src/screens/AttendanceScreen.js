@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -17,11 +17,21 @@ import LinearGradient from 'react-native-linear-gradient';
 import {ENDPOINT} from '../api/endpoint';
 import apiClient from '../api/apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import moment from 'moment';
 import {Modal} from 'react-native-paper';
 import {fetchEmployeeById} from '../redux/employeeSlice';
 import { useDispatch, useSelector } from 'react-redux';
+import {
+  ATTENDANCE_POLL_INTERVAL_MS,
+  broadcastAttendanceUpdate,
+  buildWorkProgress,
+  buildWorkProgressFromClockIn,
+  connectAttendanceSocket,
+  isoToTimeString,
+  requestAttendanceSync,
+  setAttendanceSocketHandler,
+} from '../api/attendanceSocket';
 
 const {width} = Dimensions.get('window');
 
@@ -124,8 +134,8 @@ const AttendanceScreen = () => {
   const [isLoadingOut, setIsLoadingOut] = useState(false);
   const [checkInSuccess, setCheckInSuccess] = useState('');
   const [workProgress, setWorkProgress] = useState({
-    hoursElapsed: '0',
-    percentage: '0',
+    hoursElapsed: '00:00:00',
+    percentage: '0.0',
   });
   // const [checkInTime, setCheckInTime] = useState('');
   const [checkOutTime, setCheckOutTime] = useState('');
@@ -139,154 +149,218 @@ const AttendanceScreen = () => {
   console.log('Employee Data:', employee?.shiftId?.compulsoryWorkHours );
   const [requiredHours, setRequiredHours] = useState(8.333); // Default value
   const totalRequiredHours = requiredHours;
+  const frozenWorkProgressRef = useRef(null);
+  const attendanceRecordRef = useRef(null);
+  const syncTimeoutRef = useRef(null);
+  const pollIntervalRef = useRef(null);
+
+  const applyAttendanceRecord = useCallback(
+    record => {
+      if (!record) {
+        return;
+      }
+
+      const mergedRecord = {
+        ...(attendanceRecordRef.current || {}),
+        ...record,
+        breaks: record.breaks ?? attendanceRecordRef.current?.breaks ?? [],
+      };
+
+      if (!mergedRecord.checkIn && attendanceRecordRef.current?.checkIn) {
+        mergedRecord.checkIn = attendanceRecordRef.current.checkIn;
+      }
+
+      attendanceRecordRef.current = mergedRecord;
+      const trackStatus = mergedRecord.trackStatus;
+
+      if (!trackStatus || trackStatus === 'checkOut') {
+        setCheckInSuccess(trackStatus || 'startDay');
+        frozenWorkProgressRef.current = null;
+        if (!trackStatus || trackStatus === 'checkOut') {
+          setWorkProgress({hoursElapsed: '00:00:00', percentage: '0.0'});
+        }
+        return;
+      }
+
+      setCheckInSuccess(trackStatus);
+
+      const checkInUTC = isoToTimeString(mergedRecord.checkIn);
+      if (checkInUTC) {
+        setCheckInTime(checkInUTC);
+      }
+
+      const checkOutUTC = isoToTimeString(mergedRecord.checkOut);
+      if (checkOutUTC) {
+        setCheckOutTime(checkOutUTC);
+      }
+
+      const progress = buildWorkProgress(mergedRecord, totalRequiredHours);
+      const fallbackProgress =
+        progress.hoursElapsed === '00:00:00' && checkInUTC
+          ? buildWorkProgressFromClockIn(
+              checkInUTC,
+              mergedRecord.breaks,
+              trackStatus,
+              totalRequiredHours,
+            )
+          : progress;
+
+      if (trackStatus === 'breakIn') {
+        frozenWorkProgressRef.current = fallbackProgress;
+        setWorkProgress(fallbackProgress);
+        return;
+      }
+
+      frozenWorkProgressRef.current = null;
+      setWorkProgress(fallbackProgress);
+    },
+    [totalRequiredHours],
+  );
+
+  const fetchAttendanceStatus = useCallback(async () => {
+    try {
+      const empId = await AsyncStorage.getItem('empId');
+      if (!empId) {
+        return;
+      }
+
+      const response = await apiClient.get(ENDPOINT.BREAK.CHECKCHECKIN(empId));
+      if (response.status === 200 || response.status === 201) {
+        applyAttendanceRecord(response.data.data);
+      }
+    } catch (error) {
+      setCheckInSuccess('startDay');
+      console.log(error);
+    }
+  }, [applyAttendanceRecord]);
+
+  const queueAttendanceRefresh = useCallback(
+    delayMs => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = setTimeout(() => {
+        fetchAttendanceStatus();
+      }, delayMs);
+    },
+    [fetchAttendanceStatus],
+  );
+
+  const syncAttendanceAction = useCallback(
+    async (eventName, response, fallbackStatus, actionBody = {}) => {
+      const apiData = response?.data?.data || response?.data;
+      const trackStatus =
+        apiData?.trackStatus || response?.data?.trackStatus || fallbackStatus;
+
+      const recordToBroadcast = {
+        ...(attendanceRecordRef.current || {}),
+        ...(apiData || {}),
+        trackStatus,
+        reportingChannel: 'web',
+      };
+
+      if (apiData) {
+        applyAttendanceRecord(recordToBroadcast);
+      } else if (trackStatus) {
+        setCheckInSuccess(trackStatus);
+      }
+
+      await broadcastAttendanceUpdate(
+        recordToBroadcast,
+        eventName,
+        totalRequiredHours,
+        actionBody,
+      );
+
+      setTimeout(async () => {
+        try {
+          const empId = await AsyncStorage.getItem('empId');
+          const freshResponse = await apiClient.get(
+            ENDPOINT.BREAK.CHECKCHECKIN(empId),
+          );
+          if (freshResponse?.data?.data) {
+            const freshRecord = {
+              ...freshResponse.data.data,
+              trackStatus:
+                freshResponse.data.data.trackStatus || trackStatus,
+              reportingChannel: 'mobile',
+            };
+            applyAttendanceRecord(freshRecord);
+            await broadcastAttendanceUpdate(
+              freshRecord,
+              eventName,
+              totalRequiredHours,
+              actionBody,
+            );
+          }
+        } catch (error) {
+          console.log('attendance delayed broadcast', error);
+        }
+      }, 1500);
+
+      queueAttendanceRefresh(1500);
+    },
+    [applyAttendanceRecord, queueAttendanceRefresh, totalRequiredHours],
+  );
 
   useEffect(() => {
     let timer = null;
 
-    // Jab user checked-in ho aur break par na ho tab timer chalega
-    if (checkInSuccess === 'checkIn' || checkInSuccess === 'breakOut') {
+    if (checkInSuccess === 'breakIn') {
+      if (frozenWorkProgressRef.current) {
+        setWorkProgress(frozenWorkProgressRef.current);
+      }
+    } else if (checkInSuccess === 'checkIn' || checkInSuccess === 'breakOut') {
       timer = setInterval(() => {
-        if (checkInTime) {
-          // 1. Current Time and Start Time setup
-          const now = new Date();
-          const [hh, mm, ss] = checkInTime.split(':').map(Number);
+        const record = attendanceRecordRef.current;
+        let nextProgress = record
+          ? buildWorkProgress(record, totalRequiredHours)
+          : null;
 
-          const startTime = new Date();
-          startTime.setHours(hh, mm, ss);
-
-          // 2. Time Difference in Seconds
-          const diffMs = now - startTime;
-          const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
-
-          // 3. Format to HH:MM:SS
-          const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-          const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(
-            2,
-            '0',
+        if (
+          (!nextProgress || nextProgress.hoursElapsed === '00:00:00') &&
+          checkInTime
+        ) {
+          nextProgress = buildWorkProgressFromClockIn(
+            checkInTime,
+            record?.breaks,
+            checkInSuccess,
+            totalRequiredHours,
           );
-          const s = String(totalSeconds % 60).padStart(2, '0');
-
-          const formattedHMS = `${h}:${m}:${s}`; // Ab seconds bhi aayenge
-
-          // 4. Calculate Percentage (Decimal hours for accuracy)
-          const hoursDecimal = totalSeconds / 3600;
-          const progressPercent = (
-            (hoursDecimal / totalRequiredHours) *
-            100
-          ).toFixed(2);
-
-          // Update State
-          setWorkProgress({
-            hoursElapsed: formattedHMS, // HH:MM:SS format
-            percentage: Math.min(progressPercent, 100),
-          });
         }
-      }, 1000); // Har 1 second mein chalega
-    } else if (checkInSuccess === 'startDay' || !checkInSuccess) {
-      // Agar check-out ho gaya hai ya day start nahi hua to reset
-      setWorkProgress({hoursElapsed: '00:00:00', percentage: '0'});
+
+        if (nextProgress) {
+          setWorkProgress(nextProgress);
+        }
+      }, 1000);
     }
 
     return () => clearInterval(timer);
-  }, [checkInTime, checkInSuccess]);
+  }, [checkInSuccess, checkInTime, totalRequiredHours]);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchAttendanceStatus();
+      requestAttendanceSync();
 
+      setAttendanceSocketHandler((eventName, payload, record) => {
+        applyAttendanceRecord(record);
+      });
+      connectAttendanceSocket();
 
-  useEffect(() => {
-    const checkClockIn = async () => {
-      try {
-        const empId = await AsyncStorage.getItem('empId');
-        const url = ENDPOINT.BREAK.CHECKCHECKIN(empId);
-        const response = await apiClient.get(url);
+      pollIntervalRef.current = setInterval(() => {
+        fetchAttendanceStatus();
+      }, ATTENDANCE_POLL_INTERVAL_MS);
 
-        if (response.status === 200 || response.status === 201) {
-          const data = response.data.data;
-          setCheckInSuccess(data?.trackStatus);
-
-          // Helper functions
-          const timeStringToSeconds = timeStr => {
-            const [hours, minutes, seconds] = timeStr.split(':').map(Number);
-            return hours * 3600 + minutes * 60 + seconds;
-          };
-
-          const secondsToHMS = totalSeconds => {
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            const seconds = totalSeconds % 60;
-            return `${hours.toString().padStart(2, '0')}:${minutes
-              .toString()
-              .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-          };
-
-          const currentTimeIST = new Date().toLocaleTimeString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            hour12: false,
-          });
-
-          const checkInUTC = new Date(data?.checkIn)
-            .toISOString()
-            .split('T')[1]
-            .split('.')[0];
-          setCheckInTime(checkInUTC);
-
-          const checkOutUTC =
-            data?.checkOut &&
-            new Date(data?.checkOut).toISOString().split('T')[1].split('.')[0];
-          setCheckOutTime(checkOutUTC);
-
-          const currentSecs = timeStringToSeconds(currentTimeIST);
-          const checkInSecs = timeStringToSeconds(checkInUTC);
-          let diffSecs = currentSecs - checkInSecs;
-
-          let totalBreakDurationMs = 0;
-          if (Array.isArray(data.breaks)) {
-            data.breaks.forEach(breakItem => {
-              const breakIn = new Date(breakItem.breakIn);
-              const breakOut = new Date(breakItem.breakOut);
-
-              if (!isNaN(breakIn) && !isNaN(breakOut)) {
-                const duration = breakOut - breakIn;
-                totalBreakDurationMs += duration;
-              }
-            });
-          }
-
-          const breakSecs = Math.floor(totalBreakDurationMs / 1000);
-          const finalWorkingSecs = diffSecs - breakSecs;
-
-          // HH:MM:SS format
-          const formattedWorkingTime = secondsToHMS(finalWorkingSecs);
-
-          // सिर्फ HH:MM निकालना
-          const formattedHHMM = formattedWorkingTime.slice(0, 5);
-
-          // Decimal hours for percentage calculation
-          const [hh, mm, ss] = formattedWorkingTime.split(':').map(Number);
-          const hoursDecimal = hh + mm / 60 + ss / 3600;
-
-          // const totalRequiredHours = 8.333;
-          const progressPercent = (
-            (hoursDecimal / totalRequiredHours) *
-            100
-          ).toFixed(2);
-
-          setWorkProgress({
-            hoursElapsed: formattedHHMM, // अब HH:MM format में
-            percentage: progressPercent,
-          });
-        } else {
-          Alert.alert('Error', response.data.message || 'Failed to clock in.');
+      return () => {
+        setAttendanceSocketHandler(null);
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+          pollIntervalRef.current = null;
         }
-      } catch (error) {
-        setCheckInSuccess('startDay');
-        console.log(error);
-      } finally {
-        setIsLoadingIn(false);
-      }
-    };
-
-    checkClockIn();
-  }, []);
+      };
+    }, [applyAttendanceRecord, fetchAttendanceStatus]),
+  );
 
  useEffect(() => {
   const loadData = async () => {
@@ -401,15 +475,19 @@ const AttendanceScreen = () => {
         orgId: orgId,
         userLat: '22.7487527',
         userLng: '75.8957078',
+        reportingChannel: 'web',
       });
 
       if (response.status === 200 || response.status === 201) {
-        const now = new Date();
-        const currentTime = now.toTimeString().split(' ')[0]; // HH:mm:ss
-
-        setCheckInTime(currentTime); // Timer start karne ke liye
-        setCheckInSuccess('checkIn');
-        Alert.alert('Success', response.data.message || 'Break in successful!');
+        await syncAttendanceAction('checkIn', response, 'checkIn', {
+          employeeId: empId,
+          orgId,
+          date: formattedDate,
+          checkIn: currentTime,
+          userLat: '22.7487527',
+          userLng: '75.8957078',
+        });
+        Alert.alert('Success', response.data.message || 'Check in successful!');
       } else {
         Alert.alert('Error', response.data.message || 'Failed to clock in.');
       }
@@ -442,17 +520,24 @@ const AttendanceScreen = () => {
         orgId: orgId,
         userLat: '22.7487527',
         userLng: '75.8957078',
-        reportingType: 'mobile'
+        reportingChannel: 'web',
       });
 
       if (response.status === 200 || response.status === 201) {
-        setCheckInSuccess('');
+        await syncAttendanceAction('checkOut', response, 'checkOut', {
+          employeeId: empId,
+          orgId,
+          date: formattedDate,
+          checkOut: currentTime,
+          userLat: '22.7487527',
+          userLng: '75.8957078',
+        });
         Alert.alert(
           'Success',
-          response.data.message || 'Break out successful!',
+          response.data.message || 'Check out successful!',
         );
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to break out.');
+        Alert.alert('Error', response.data.message || 'Failed to check out.');
       }
     } catch (error) {
       console.log(error.message);
@@ -480,9 +565,19 @@ const AttendanceScreen = () => {
         orgId: orgId,
         userLat: '22.7487527',
         userLng: '75.8957078',
+        reportingChannel: 'web',
+        reportingType: 'web',
+        syncSocket: true,
       });
       if (response.status === 200 || response.status === 201) {
-        setCheckInSuccess('breakIn');
+        await syncAttendanceAction('breakIn', response, 'breakIn', {
+          employeeId: empId,
+          orgId,
+          date: formattedDate,
+          breakIn: currentTime,
+          userLat: '22.7487527',
+          userLng: '75.8957078',
+        });
       } else {
         Alert.alert('Error', response.data.message || 'Failed to Break In.');
       }
@@ -512,10 +607,20 @@ const AttendanceScreen = () => {
         orgId: orgId,
         userLat: '22.7487527',
         userLng: '75.8957078',
+        reportingChannel: 'web',
+        reportingType: 'web',
+        syncSocket: true,
       });
 
       if (response.status === 200 || response.status === 201) {
-        setCheckInSuccess('breakOut');
+        await syncAttendanceAction('breakOut', response, 'breakOut', {
+          employeeId: empId,
+          orgId,
+          date: formattedDate,
+          breakOut: currentTime,
+          userLat: '22.7487527',
+          userLng: '75.8957078',
+        });
       } else {
         Alert.alert('Error', response.data.message || 'Failed to Break Out.');
       }
@@ -654,7 +759,7 @@ const AttendanceScreen = () => {
           <View style={styles.circle}>
             <Progress.Circle
               size={160}
-              progress={workProgress.percentage / 100}
+              progress={Number(workProgress.percentage) / 100}
               color="#F38D0E"
               unfilledColor="#E4392F"
               borderWidth={0}
@@ -664,7 +769,7 @@ const AttendanceScreen = () => {
             <View style={styles.circleTextContainer}>
               <Text style={styles.circleTop}>START</Text>
               <Text style={styles.circleBottom}>
-                {workProgress.percentage}%
+                {Number(workProgress.percentage).toFixed(1)}%
               </Text>
             </View>
           </View>
