@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const authConfig = axios.create({
-  baseURL: 'https://uat-backend-hrms.ezcompliance.in',
-  // baseURL: "https://hrmsapi.ezcompliance.in",
+  // baseURL: 'https://uat-backend-hrms.ezcompliance.in',
+  baseURL: "https://hrmsapi.ezcompliance.in",
   headers: {
     'Content-Type': 'application/json',
   },

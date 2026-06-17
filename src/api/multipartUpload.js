@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const API_BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
-// export const API_BASE_URL = 'https://hrmsapi.ezcompliance.in/';
+// export const API_BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
+export const API_BASE_URL = 'https://hrmsapi.ezcompliance.in/';
 
 const ALLOWED_EXTENSIONS = new Set([
   'xlsx',

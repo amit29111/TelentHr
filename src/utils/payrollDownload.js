@@ -8,8 +8,8 @@ import {
   request,
 } from 'react-native-permissions';
 
-const BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
-// const BASE_URL = 'https://hrmsapi.ezcompliance.in/';
+// const BASE_URL = 'https://uat-backend-hrms.ezcompliance.in/';
+const BASE_URL = 'https://hrmsapi.ezcompliance.in/';
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|heic)$/i;
 
 const sanitizeFileName = name =>

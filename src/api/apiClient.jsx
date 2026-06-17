@@ -2,8 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const apiClient = axios.create({
-   baseURL: "https://uat-backend-hrms.ezcompliance.in/", ////nss
-  //  baseURL: "https://hrmsapi.ezcompliance.in/", // client.      
+  //  baseURL: "https://uat-backend-hrms.ezcompliance.in/", ////nss
+   baseURL: "https://hrmsapi.ezcompliance.in/", // client.      
   headers: {
     "Content-Type": "application/json",
   },
