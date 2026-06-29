@@ -69,7 +69,6 @@ const DashboardScreen = ({navigation}) => {
     fetchData();
   }, [dispatch]);
 
-
   const filteredHighlights = highlightsData?.filter(
     item => item.type === 'birthday' || item.type === 'work_anniversary',
   );
@@ -161,17 +160,26 @@ const DashboardScreen = ({navigation}) => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.profilePicContainer}>
-            {allRecord?.photoUrl ? (
+            {allRecord?.photoUrl?.trim() ? (
               <Image
                 source={{uri: allRecord.photoUrl}}
                 style={styles.profilePic}
+                resizeMode="cover"
               />
             ) : (
               <View style={styles.initialsContainer}>
                 <Text style={styles.initialsText}>
-                  {allRecord?.firstName
-                    ? allRecord.firstName.substring(0, 2).toUpperCase()
-                    : ''}
+                  {(() => {
+                    const firstName = allRecord?.firstName?.trim() || '';
+                    const lastName = allRecord?.lastName?.trim() || '';
+
+                    if (firstName && lastName) {
+                      return (
+                        firstName.charAt(0) + lastName.charAt(0)
+                      ).toUpperCase();
+                    }
+                    return firstName.substring(0, 2).toUpperCase();
+                  })()}
                 </Text>
               </View>
             )}
@@ -187,8 +195,8 @@ const DashboardScreen = ({navigation}) => {
             </TouchableOpacity>
           </View>
 
-          <View style={{flex: 1, marginLeft: -30}}>
-            <Text style={styles.greeting}>Hello,</Text>
+          <View style={{flex: 1, marginLeft: 0}}>
+            <Text style={styles.greeting}>Hello, </Text>
             <TextTicker
               style={styles.greeting}
               duration={5000}
@@ -297,30 +305,38 @@ const DashboardScreen = ({navigation}) => {
         <View style={styles.birthdayCard}>
           <Text style={styles.cardTitle}>Birthdays & Work Anniversaries</Text>
 
-          {filteredHighlights?.map((item, index) => (
-            <View key={index} style={styles.eventRow}>
-              {/* LEFT ICON */}
-              <Text style={styles.eventIcon}>
-                {item.type === 'birthday' ? '🎉' : '🏆'}
-              </Text>
-
-              {/* CENTER CONTENT */}
-              <View style={{flex: 1}}>
-                <Text style={styles.eventTitle}>{item.title}</Text>
-                <Text style={styles.eventSubtitle}>{item.details}</Text>
-                <Text style={styles.eventDate}>
-                  {new Date(item.date).toDateString()}
+          <ScrollView
+            showsVerticalScrollIndicator={true}
+            nestedScrollEnabled={true}
+            style={{maxHeight: 160}} // 3 items ke approx height
+          >
+            {filteredHighlights?.map((item, index) => (
+              <View key={index} style={styles.eventRow}>
+                {/* LEFT ICON */}
+                <Text style={styles.eventIcon}>
+                  {item.type === 'birthday' ? '🎉' : '🏆'}
                 </Text>
+
+                {/* CENTER CONTENT */}
+                <View style={{flex: 1}}>
+                  <Text style={styles.eventTitle}>{item.title}</Text>
+
+                  <Text style={styles.eventSubtitle}>{item.details}</Text>
+
+                  <Text style={styles.eventDate}>
+                    {new Date(item.date).toDateString()}
+                  </Text>
+                </View>
+
+                {/* RIGHT BUTTON */}
+                <TouchableOpacity>
+                  <Text style={styles.actionText}>
+                    {item.type === 'birthday' ? 'Send Wishes' : 'Congratulate'}
+                  </Text>
+                </TouchableOpacity>
               </View>
-
-              {/* RIGHT BUTTON */}
-              <TouchableOpacity>
-                <Text style={styles.actionText}>
-                  {item.type === 'birthday' ? 'Send Wishes' : 'Congratulate'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+            ))}
+          </ScrollView>
         </View>
       </View>
 
@@ -443,29 +459,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   profilePicContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     position: 'relative',
-    marginTop: 36,
+    marginTop: 20,
   },
   plusIconContainer: {
     position: 'absolute',
-    bottom: 40,
-    right: 42,
+    bottom: 2,
+    right: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
-    zIndex: 999,
-    elevation: 10,
+    borderColor: '#ddd',
   },
   profilePic: {
-    width: width * 0.14,
-    height: width * 0.14,
-    borderRadius: width * 0.07,
+    width: '100%',
+    height: '100%',
+    borderRadius: 35,
   },
+
   icon: {width: 12, height: 12},
   greeting: {
     fontSize: 18,
@@ -500,6 +518,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 15,
     minHeight: 135,
+    borderRadius: 12,
   },
   birthdayHeader: {
     flexDirection: 'row',
@@ -660,14 +679,20 @@ const styles = StyleSheet.create({
   initialsContainer: {
     width: '100%',
     height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 35,
     backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   eyeIcon: {position: 'absolute', right: 15},
   eyeImage: {width: 20, height: 20},
-  initialsText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
+  initialsText: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -679,6 +704,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    height: 60,
   },
 
   eventIcon: {

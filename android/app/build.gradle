@@ -84,10 +84,16 @@ android {
             applicationId "com.ezcompliance.ezhrmslite"
             minSdkVersion rootProject.ext.minSdkVersion
             targetSdkVersion rootProject.ext.targetSdkVersion
-            versionCode 5        
-            versionName "1.0.5"  
+            versionCode 8
+            versionName "1.0.8"
         }
-    
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     signingConfigs {
         
         debug {
@@ -120,18 +126,6 @@ android {
 
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation project(':react-native-permissions')
-    if (hermesEnabled.toBoolean()) {
-        implementation("com.facebook.react:hermes-android")
-    } else {
-        implementation jscFlavor
-    }
-}
-
-dependencies {
-    // The version of react-native is set by the React Native Gradle Plugin
-    implementation("com.facebook.react:react-android")
-    implementation project(':react-native-permissions')
     implementation project(':react-native-permissions')
 
     if (hermesEnabled.toBoolean()) {

@@ -63,13 +63,13 @@ const ProfileScreen = ({navigation}) => {
   const [profileImage, setProfileImage] = useState(null);
 
   const requestGalleryPermission = async () => {
+    if (Platform.OS === 'android') {
+      // Android Photo Picker (react-native-image-picker 8+) needs no storage permission.
+      return true;
+    }
+
     try {
-      const permission =
-        Platform.OS === 'android'
-          ? Platform.Version >= 33
-            ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
-            : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
-          : PERMISSIONS.IOS.PHOTO_LIBRARY;
+      const permission = PERMISSIONS.IOS.PHOTO_LIBRARY;
       const current = await check(permission);
 
       if (current === RESULTS.GRANTED) return true;
@@ -79,7 +79,7 @@ const ProfileScreen = ({navigation}) => {
         if (result === RESULTS.GRANTED) return true;
         return false;
       }
-      
+
       if (current === RESULTS.BLOCKED) {
         Alert.alert(
           'Permission blocked',

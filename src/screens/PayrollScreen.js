@@ -48,6 +48,17 @@ const PayrollScreen = ({navigation}) => {
     navigation.navigate('ProfileScreen');
   };
 
+  const getInitials = () => {
+  const first = allRecord?.firstName?.trim() || '';
+  const last = allRecord?.lastName?.trim() || '';
+
+  if (first && last) {
+    return `${first[0]}${last[0]}`.toUpperCase();
+  }
+
+  return first.substring(0, 2).toUpperCase();
+};
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -78,33 +89,32 @@ const PayrollScreen = ({navigation}) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.profilePicContainer}>
-              {allRecord?.photoUrl ? (
-                <Image
-                  source={{uri: allRecord.photoUrl}}
-                  style={styles.profilePic}
-                />
-              ) : (
-                <View style={styles.initialsContainer}>
-                  <Text style={styles.initialsText}>
-                    {allRecord?.firstName
-                      ? allRecord.firstName.substring(0, 2).toUpperCase()
-                      : ''}
-                  </Text>
-                </View>
-              )}
+  {allRecord?.photoUrl?.trim() ? (
+    <Image
+      source={{uri: allRecord.photoUrl}}
+      style={styles.profilePic}
+      resizeMode="cover"
+    />
+  ) : (
+    <View style={styles.initialsContainer}>
+      <Text style={styles.initialsText}>
+        {getInitials()}
+      </Text>
+    </View>
+  )}
 
-              <TouchableOpacity
-                style={styles.plusIconContainer}
-                onPress={handleImageUpload}>
-                <Image
-                  source={require('../../src/assets/dashboardIcon/plusicon.png')}
-                  style={styles.icon}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
-            </View>
+  <TouchableOpacity
+    style={styles.plusIconContainer}
+    onPress={handleImageUpload}>
+    <Image
+      source={require('../../src/assets/dashboardIcon/plusicon.png')}
+      style={styles.icon}
+      resizeMode="contain"
+    />
+  </TouchableOpacity>
+</View>
 
-            <View style={{flex: 1, marginLeft: -30}}>
+            <View style={{flex: 1, marginLeft: 0}}>
               <Text style={styles.greeting}>Hello,</Text>
               <TextTicker
                 style={styles.greeting}
@@ -233,29 +243,29 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   profilePicContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    position: 'relative',
-    marginTop: 36,
-  },
-  plusIconContainer: {
-    position: 'absolute',
-    bottom: 40,
-    right: 42,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    zIndex: 999,
-    elevation: 10,
-  },
+  width: 70,
+  height: 70,
+  borderRadius: 35,
+  position: 'relative',
+  marginTop: 20,
+},
+plusIconContainer: {
+  position: 'absolute',
+  bottom: 0,
+  right: -3,
+  backgroundColor: '#fff',
+  width: 22,
+  height: 22,
+  borderRadius: 11,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
   profilePic: {
-    width: width * 0.14,
-    height: width * 0.14,
-    borderRadius: width * 0.07,
-  },
+  width: '100%',
+  height: '100%',
+  borderRadius: 35,
+},
+
   icon: {width: 12, height: 12},
   greeting: {
     fontSize: 18,
@@ -476,16 +486,23 @@ const styles = StyleSheet.create({
     height: 200,
   },
   initialsContainer: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-  },
+  width: '100%',
+  height: '100%',
+  borderRadius: 35,
+  backgroundColor: '#4CAF50',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
 
   eyeIcon: {position: 'absolute', right: 15},
   eyeImage: {width: 20, height: 20},
-  initialsText: {color: '#fff', fontSize: 18, fontWeight: 'bold'},
+  initialsText: {
+  color: '#fff',
+  fontSize: 24,
+  fontWeight: '700',
+},
+
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
